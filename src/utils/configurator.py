@@ -60,12 +60,10 @@ class ModelConfig:
     type: str
     n_layers: int
     raw_layers: list
-    loss: nn.Module
     layers: list = field(init=False)
 
     def __post_init__(self):
         super().__setattr__("layers", self.process_layers(self.type, self.raw_layers))
-        self.loss = torch_loss[self.loss]
 
     def process_layers(self, type, raw_layers):
 
@@ -96,9 +94,11 @@ class TrainingConfig:
     batch_size: int
     epochs: int
     optimizer: optim.Optimizer
+    loss: nn.Module
 
     def __post_init__(self):
         self.optimizer = torch_optim[self.optimizer]
+        self.loss = torch_loss[self.loss]
 
 
 def load_config_yml(path_to_file: str) -> dict:

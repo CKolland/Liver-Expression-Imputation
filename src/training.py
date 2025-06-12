@@ -92,6 +92,7 @@ class TrainingOutput:
 def train(
     model: nn.Module,
     optimizer: optim.Optimizer,
+    criterion: nn.Module,
     train_loader: DataLoader,
     epoch: int,
     train_output: TrainingOutput,
@@ -115,8 +116,10 @@ def train(
 
         optimizer.zero_grad()  # Clear gradients
         output = model(data)
-        # Average batch loss stored in output
-        loss = output.loss
+        # `loss_function(z, x)` computes tensor of shape [z, x] with element-wise loss
+        # `.sum(-1)` sums loss over predicted features (total loss per sample)
+        # `.mean()` averages the per sample loss over batch
+        loss = criterion(output.y, target).sum(-1).mean()
         loss.backward()  # Backpropagation
         optimizer.step()  # Update parameters
 
@@ -131,6 +134,7 @@ def train(
 
 def validate(
     model: nn.Module,
+    criterion: nn.Module,
     val_loader: DataLoader,
     epoch: int,
     train_output: TrainingOutput,
@@ -154,7 +158,7 @@ def validate(
             data, target = data.to(device), target.to(device)
 
             output = model(data)
-            loss = output.loss
+            loss = criterion(output.y, target).sum(-1).mean()
 
             # Sum average batch loss
             val_loss += loss
@@ -177,6 +181,7 @@ def test(model: nn.Module, test_loader: DataLoader, device: str, logger: Logger)
             total=len(test_loader),
             desc=f"Testing",
         ):
+            logger.info(f"Testing BATCH {batch_idx + 1} / {len(test_loader)}")
             data, target = data.to(device), target.to(device)
 
             output = model(data)

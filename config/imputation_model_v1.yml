@@ -1,7 +1,7 @@
 data:
-  trainig_data: "data/adata_subset_nafld_log1p.h5ad"
-  test_data: "data/test_data.h5ad"
-  imputation_mask: "data/imputation_mask.csv"
+  trainig_data: "./data/model_input/adata_subset_nafld_log1p.h5ad"
+  test_data: "./data/model_input/test_data.h5ad"
+  imputation_mask: "./data/model_input/imputation_mask.csv"
   
 model:
   name: "liver_imputation_v1"
@@ -33,10 +33,10 @@ model:
       in_dim: 15526
       out_dim: 31053
       activation: "relu"
-  loss: "mse"
 
 training:
   kfolds: 10
   batch_size: 64
   epochs: 1000
   optimizer: "adam"
+  loss: "mse"
