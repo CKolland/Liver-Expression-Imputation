@@ -244,10 +244,23 @@ def fit(
         # Train the model on the current fold
         for epoch in range(t_conf.epochs):
             train_output = train(
-                fold_model, optimizer, train_loader, epoch, train_output, device, logger
+                fold_model,
+                optimizer,
+                t_conf.loss(),
+                train_loader,
+                epoch,
+                train_output,
+                device,
+                logger,
             )
             train_output = validate(
-                fold_model, val_loader, epoch, train_output, device, logger
+                fold_model,
+                t_conf.loss(),
+                val_loader,
+                epoch,
+                train_output,
+                device,
+                logger,
             )
 
             train_loss, val_loss = (

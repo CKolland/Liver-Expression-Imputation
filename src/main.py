@@ -124,7 +124,7 @@ def main():
     #     Setup model
     # -------------------
 
-    mlp = MLP(m_conf.to_torch(), m_conf.loss())
+    mlp = MLP(m_conf.to_torch())
     logger.info("Setup model")
     logger.debug(mlp)
 
