@@ -79,7 +79,7 @@ def main():
     logger.info(f"Train data loaded succesfully: {d_conf.trainig_data}")
     logger.debug(train_data)
 
-    st_test_data = ad.read_h5ad("d_conf.test_data")
+    st_test_data = ad.read_h5ad(d_conf.test_data)
     st_test_data.X = st_test_data.layers[args.layer]
     logger.info(f"ST test data loaded succesfully: {d_conf.test_data}")
     logger.debug(st_test_data)
