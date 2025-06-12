@@ -110,8 +110,6 @@ def train(
         total=len(train_loader),
         desc=f"Training EPOCH {epoch + 1}",
     ):
-        logger.info(f"Train EPOCH {epoch + 1}, BATCH {batch_idx + 1}")
-
         data, target = data.to(device), target.to(device)
 
         optimizer.zero_grad()  # Clear gradients
@@ -153,8 +151,6 @@ def validate(
             total=len(val_loader),
             desc=f"Validation EPOCH {epoch + 1}",
         ):
-            logger.info(f"Validate EPOCH {epoch + 1}, BATCH {batch_idx + 1}")
-
             data, target = data.to(device), target.to(device)
 
             output = model(data)
@@ -181,7 +177,6 @@ def test(model: nn.Module, test_loader: DataLoader, device: str, logger: Logger)
             total=len(test_loader),
             desc=f"Testing",
         ):
-            logger.info(f"Testing BATCH {batch_idx + 1} / {len(test_loader)}")
             data, target = data.to(device), target.to(device)
 
             output = model(data)
