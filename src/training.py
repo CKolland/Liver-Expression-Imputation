@@ -234,7 +234,7 @@ def fit(
 
         # Setup early stopping
         early_stopping = EarlyStopping()
-        train_output = TrainingOutput()
+        train_output = TrainingOutput({}, {})
 
         # Train the model on the current fold
         for epoch in range(t_conf.epochs):
