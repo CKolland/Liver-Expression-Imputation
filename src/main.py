@@ -74,12 +74,12 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Load training and test data
-    train_data = ad.read_h5ad("data/adata_subset_nafld_log1p.h5ad")
+    train_data = ad.read_h5ad(d_conf.trainig_data)
     train_data.X = train_data.layers[args.layer]
     logger.info(f"Train data loaded succesfully: {d_conf.trainig_data}")
     logger.debug(train_data)
 
-    st_test_data = ad.read_h5ad("data/test_data.h5ad")
+    st_test_data = ad.read_h5ad("d_conf.test_data")
     st_test_data.X = st_test_data.layers[args.layer]
     logger.info(f"ST test data loaded succesfully: {d_conf.test_data}")
     logger.debug(st_test_data)
