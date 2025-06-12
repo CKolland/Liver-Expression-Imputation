@@ -97,6 +97,9 @@ class TrainingConfig:
     epochs: int
     optimizer: optim.Optimizer
 
+    def __post_init__(self):
+        self.optimizer = torch_optim[self.optimizer]
+
 
 def load_config_yml(path_to_file: str) -> dict:
 
