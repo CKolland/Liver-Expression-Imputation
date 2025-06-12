@@ -85,7 +85,8 @@ def main():
     logger.debug(st_test_data)
 
     # Load list of genes that define which genes are not masked
-    imputation_mask = pd.read_csv(d_conf.imputation_mask)
+    imputation_mask = pd.read_csv(d_conf.imputation_mask, header=None)
+    imputation_mask = imputation_mask[0].tolist()
 
     # Calculate the number of entries for training and test data
     train_size = int(0.9 * train_data.shape[0])
