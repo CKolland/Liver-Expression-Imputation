@@ -1,0 +1,42 @@
+data:
+  trainig_data: "data/adata_subset_nafld_log1p.h5ad"
+  test_data: "data/test_data.h5ad"
+  imputation_mask: "data/imputation_mask.csv"
+  
+model:
+  name: "liver_imputation_v1"
+  type: mlp
+  n_layers: 5
+  raw_layers:
+    layer1:
+      type: "linear"
+      in_dim: 931
+      out_dim: 1941 
+      activation: "relu"
+    layer2:
+      type: "linear"
+      in_dim: 1941
+      out_dim: 3882
+      activation: "relu"
+    layer3:
+      type: "linear"
+      in_dim: 3882
+      out_dim: 7763
+      activation: "relu"
+    layer4:
+      type: "linear"
+      in_dim: 7763
+      out_dim: 15526
+      activation: "relu"
+    layer5:
+      type: "linear"
+      in_dim: 15526
+      out_dim: 31053
+      activation: "relu"
+  loss: "mse"
+
+training:
+  kfolds: 10
+  batch_size: 64
+  epochs: 1000
+  optimizer: "adam"
