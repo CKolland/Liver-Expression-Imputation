@@ -1,21 +1,16 @@
 [imputation_mask]
 type = "csv"
-path = "data/imputation_mask.csv"
+path = "data/test_run/imputation_mask.csv"
 header = 0
 
 [train_data]
 type = "h5ad"
-path = "data/run_test/adata_concat_train.h5ad"
+path = "data/test_run/adata_concat_train.h5ad"
 layer = "log1p"
 
 [test_data.dataset1]
 type = "h5ad"
-path = "data/run_test/adata_concat_test.h5ad"
-layer = "log1p"
-
-[test_data.dataset2]
-type = "h5ad"
-path = "data/test_data.h5ad"
+path = "data/test_run/adata_concat_test.h5ad"
 layer = "log1p"
 
 [model]
@@ -29,7 +24,7 @@ in_dim = 931
 out_dim = 15526
 activation = "leaky_relu"
 
-[model.layers.layer3]
+[model.layers.layer2]
 type = "linear"
 in_dim = 15526
 out_dim = 31053
