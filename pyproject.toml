@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "STEXI"
-version = "0.1.0"
+version = "0.3.0"
 description = "(S)patial (T)ranscriptomics (Ex)pression (I)mputation"
 authors = [
     { name = "Christian Kolland", email = "christian.kolland@stud.uni-frankfurt.de" }
@@ -13,6 +13,7 @@ dependencies = []
 
 [project.scripts]
 preprocess = "preprocess.preprocess:main"
+fit = "fit.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
