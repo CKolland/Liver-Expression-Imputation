@@ -368,7 +368,7 @@ class TrainingPipeline:
             fold_model.to(self.device)
 
             # Create optimizer for current model parameters
-            optimizer = self._setup_optimizer(fold_model.parameters)
+            optimizer = self._setup_optimizer(fold_model)
 
             # Initialize early stopping for this fold
             early_stopping = EarlyStopping(patience=self.patience, delta=self.delta)
