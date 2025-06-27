@@ -156,7 +156,14 @@ class ModelConfig:
 
 @dataclass
 class EarlyStoppingConfig:
-    """Configuration for early stopping."""
+    """Configuration settings for early stopping during training.
+
+    Early stopping halts training when the validation performance
+    stops improving for a number of consecutive epochs.
+
+    :param int patience: Number of epochs to wait for improvement before stopping.
+    :param float delta: Minimum change in validation loss to be considered as improvement.
+    """
 
     patience: int = 20
     delta: float = 0.0
@@ -164,32 +171,45 @@ class EarlyStoppingConfig:
 
 @dataclass
 class OptimizationConfig:
-    """Configuration for optimization."""
+    """Configuration for model optimization during training.
+
+    Defines the choice of optimizer and its hyperparameters.
+
+    :param str optimizer: Name of the optimizer (must exist in C.TORCH_OPTIM).
+    :param float learning_rate: Learning rate for the optimizer.
+    :param float weight_decay: L2 regularization strength.
+    """
 
     optimizer: str = "adam"
     learning_rate: float = 1e-3
     weight_decay: float = 1e-4
 
-    @staticmethod
-    def get_optimizer(name: str) -> optim.Optimizer:
-        """_summary_
+    def get_optimizer(self) -> optim.Optimizer:
+        """Retrieve the optimizer class based on the selected name.
 
-        :param name: _description_
-        :type name: str
-        :return: _description_
+        :return: Optimizer class corresponding to the selected name.
         :rtype: optim.Optimizer
+
+        :raises ValueError: If the optimizer name is not supported.
         """
         optims = C.TORCH_OPTIM
 
-        if name not in optims:
-            raise ValueError(f"Unsupported optimizer: {name}")
+        if self.optimizer not in optims:
+            raise ValueError(f"Unsupported optimizer: {self.optimizer}")
 
-        return optims[name]
+        return optims[self.optimizer]
 
     def create_optimizer(self, model_params) -> optim.Optimizer:
-        """Create optimizer instance with this configuration."""
+        """Create an optimizer instance using the current configuration.
+
+        :param model_params: Parameters of the model to optimize.
+        :type model_params: Any iterable of parameters (e.g., model.parameters()).
+
+        :return: Instantiated optimizer.
+        :rtype: optim.Optimizer
+        """
         if self.optimizer.lower() in ["adam", "adamw"]:
-            return self._get_optimizer(self.optimizer)(
+            return self.get_optimizer(self.optimizer)(
                 model_params,
                 lr=self.learning_rate,
                 weight_decay=self.weight_decay,
@@ -198,7 +218,20 @@ class OptimizationConfig:
 
 @dataclass
 class TrainingConfig:
-    """Main training configuration."""
+    """Main configuration container for training settings.
+
+    Encapsulates general training parameters, early stopping behavior,
+    and optimization strategy.
+
+    :param int seed: Random seed for reproducibility.
+    :param nn.Module loss: Loss function used for training.
+    :param int kfolds: Number of folds for K-Fold cross-validation.
+    :param int batch_size: Number of samples per batch.
+    :param int epochs: Maximum number of training epochs.
+    :param int num_workers: Number of worker threads for data loading.
+    :param EarlyStoppingConfig early_stopping: Configuration for early stopping.
+    :param OptimizationConfig optimization: Configuration for the optimizer.
+    """
 
     seed: int
     loss: nn.Module
@@ -312,24 +345,32 @@ def setup_model(model: dict) -> ModelConfig:
 
 
 def setup_training(training: dict) -> TrainingConfig:
-    """_summary_
+    """Construct a fully populated TrainingConfig object from a raw dictionary.
 
-    :param training: _description_
-    :type training: dict
-    :return: _description_
+    This function takes a dictionary (e.g., from a config file), processes and
+    instantiates nested configuration objects like early stopping, optimization,
+    and the loss function, and returns a `TrainingConfig` instance.
+
+    :param dict training: Dictionary containing raw training configuration.
+                          Expected keys include 'loss', and optionally
+                          'early_stopping' and 'optimization'.
+
+    :return: Instantiated and validated TrainingConfig object.
     :rtype: TrainingConfig
     """
     training_copy = deepcopy(training)
 
-    # Create early stopping config
+    # Parse and convert early stopping configuration if present
     if "early_stopping" in training_copy.keys():
         early_stopping = EarlyStoppingConfig(**training_copy["early_stopping"])
         training_copy["early_stopping"] = early_stopping
 
+    # Parse and convert optimization configuration if present
     if "optimization" in training_copy.keys():
         optimization = OptimizationConfig(**training_copy["optimization"])
         training_copy["optimization"] = optimization
 
+    # Retrieve loss function from string identifier
     loss = get_loss(training_copy["loss"])
     training_copy["loss"] = loss
 
