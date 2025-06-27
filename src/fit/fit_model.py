@@ -93,7 +93,7 @@ def fit_model(path_to_setup: str, path_to_out: str):
         train_config.early_stopping.patience,
         train_config.early_stopping.delta,
         train_config.batch_size,
-        train_config.loss,
+        train_config.loss(),
         train_config.optimization.get_optimizer(),
         train_config.optimization.learning_rate,
         train_config.optimization.weight_decay,

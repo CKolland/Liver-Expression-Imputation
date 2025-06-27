@@ -290,14 +290,12 @@ class TrainingPipeline:
         with torch.no_grad():
             # Create a progress bar to monitor validation progress
             pbar = tqdm(val_loader, desc=f"Fold {fold + 1} - Val Epoch {epoch + 1}")
-            for data, target in pbar:
+            for x, y in pbar:
                 # Move input and target tensors to the specified device
-                data, target = data.to(self.device), target.to(self.device)
+                x, y = x.to(self.device), y.to(self.device)
 
-                output = self.model(data)  # Forward pass
-                loss = (
-                    self.criterion(output, target).sum(-1).mean()
-                )  # Compute average batch loss
+                y_hat = self.model(x)  # Forward pass
+                loss = self.criterion(y_hat, y).sum(-1).mean()  # Average batch loss
 
                 # Accumulate batch loss
                 epoch_loss += loss.item()
