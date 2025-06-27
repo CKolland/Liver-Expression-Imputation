@@ -1,7 +1,7 @@
 [imputation_mask]
 type = "csv"
 path = "data/imputation_mask.csv"
-header = 0
+header = "none"
 
 [train_data]
 type = "h5ad"
