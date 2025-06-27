@@ -5,12 +5,12 @@ header = 0
 
 [train_data]
 type = "h5ad"
-path = "data/run_test/adata_concat_train.h5ad"
+path = "data/train_data_scRNAseq_train.h5ad"
 layer = "log1p"
 
 [test_data.dataset1]
 type = "h5ad"
-path = "data/run_test/adata_concat_test.h5ad"
+path = "data/train_data_scRNAseq_test.h5ad"
 layer = "log1p"
 
 [test_data.dataset2]
@@ -43,9 +43,10 @@ out_dim = 31053
 dropout = 0.2
 
 [training]
-kfolds = 2
-batch_size = 128
-epochs = 5
+seed = 27062025
+kfolds = 5
+batch_size = 256
+epochs = 500
 loss = "mse"
 
 [training.early_stopping]
