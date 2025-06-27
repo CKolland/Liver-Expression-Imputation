@@ -16,7 +16,7 @@ layer = "log1p"
 [model]
 name = "liver_imputation_v1"
 type = "mlp"
-n_layers = 3
+n_layers = 2
 
 [model.layers.layer1]
 type = "linear"
@@ -34,7 +34,7 @@ dropout = 0.2
 seed = 27062025
 kfolds = 2
 batch_size = 128
-epochs = 5
+epochs = 1
 loss = "mse"
 
 [training.early_stopping]
