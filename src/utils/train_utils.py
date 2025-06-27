@@ -452,7 +452,7 @@ class TrainingPipeline:
             torch.save(model.state_dict(), save_path / "best_model.pth")
 
             # Convert and save detailed metrics as a feather file
-            detailed_metrics = metrics.to_dataframe()
+            detailed_metrics = metrics.to_data_frame()
             detailed_metrics.to_feather(save_path / "training_metrics.feather")
 
             # Convert and save summary metrics for each fold
