@@ -154,11 +154,11 @@ class TrainingMetrics:
         :return: DataFrame containing per-epoch training and validation metrics.
         :rtype: pd.DataFrame
         """
-        metrics = []
+        results = []
 
         for fold, metrics in self.fold_metrics.items():
             for i, epoch in enumerate(metrics["epochs"]):
-                metrics.append(
+                results.append(
                     {
                         "fold": fold,
                         "epoch": epoch,
@@ -169,7 +169,7 @@ class TrainingMetrics:
                     }
                 )
 
-        return pd.DataFrame(metrics)
+        return pd.DataFrame(results)
 
     def get_fold_summary(self) -> pd.DataFrame:
         """Summarize metrics per fold.
