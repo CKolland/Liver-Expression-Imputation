@@ -7,8 +7,8 @@ import torch
 from fit.model import MLP
 import utils.confy as confy
 import utils.io_utils as io
-from utils.io_utils import ImputationDataset
-from utils.train_utils import fit_kfold, save_training_results
+from utils.io_utils import ImputationDataset, TrainingMetrics
+from utils.train_utils import TrainingPipeline
 
 
 def fit_model(path_to_setup: str, path_to_out: str):
@@ -32,39 +32,40 @@ def fit_model(path_to_setup: str, path_to_out: str):
     # ---------------------
 
     logger = io.setup_logging(run_dir / f"training_run_{now}.log", "train_model")
-    logger.info("Setup complete.")
+    logger.info("✅ Setup complete.")
 
     # -----------------
     #     Load data
     # -----------------
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    logger.info(f"Following device supported for this run: {device}.")
+    logger.info(f"Supported device for this run: {device}.")
+    logger.info("----")
 
     run_setup = io.load_toml(setup_file)
 
     # Load training data
     train_data_config = confy.setup_dataset(run_setup["train_data"])
     train_data = ad.read_h5ad(train_data_config.path)
-    logger.info(f"📁 Train data loaded succesfully: '{train_data_config.path}'.")
-    logger.debug(train_data)
+    logger.info(f"📁 Training data loaded successfully: '{train_data_config.path}'.")
 
-    # Chose data layer
+    # Choose data layer if provided
     if train_data_config.layer is not None:
         train_data.X = train_data.layers[train_data_config.layer]
         logger.info(f"Selected {train_data_config.layer} as data layer.")
 
+    logger.debug(train_data)
+
     # Load imputation mask
     masking_config = confy.setup_dataset(run_setup["imputation_mask"])
-    imputation_mask = pd.read_csv(
-        masking_config.path,
-        header=None if masking_config.header == 0 else 0,
-    )
+    imputation_mask = pd.read_csv(masking_config.path, header=masking_config.header)
     imputation_mask = imputation_mask[0].tolist()
-    logger.info(f"📁 Imputation mask loaded succesfully: '{masking_config.path}'.")
+    logger.info(f"📁 Mask for imputation loaded successfully: '{masking_config.path}'.")
 
     train_dataset = ImputationDataset(train_data, imputation_mask)
     logger.info("Created training dataset.")
+    logger.debug(train_dataset)
+    logger.info("----")
 
     # -------------------
     #     Setup model
@@ -72,8 +73,9 @@ def fit_model(path_to_setup: str, path_to_out: str):
 
     model_config = confy.setup_model(run_setup["model"])
     mlp = MLP(model_config.to_torch(), device)
-    logger.info("Setup model successfully.")
+    logger.info("Built model successfully.")
     logger.debug(mlp)
+    logger.info("----")
 
     # -------------------
     #     Train model
@@ -81,22 +83,27 @@ def fit_model(path_to_setup: str, path_to_out: str):
 
     train_config = confy.setup_training(run_setup["training"])
 
-    # Train with KFold CV
-    best_model, metrics = fit_kfold(
-        model_template=mlp,
-        dataset=train_dataset,
-        config=train_config,
-        device=device,
-        logger=logger,
-        seed=42,
+    pipeline = TrainingPipeline(
+        train_dataset,
+        mlp,
+        device,
+        logger,
+        train_config.kfolds,
+        train_config.epochs,
+        train_config.early_stopping.patience,
+        train_config.early_stopping.delta,
+        train_config.batch_size,
+        train_config.loss,
+        train_config.optimization.get_optimizer(),
+        train_config.optimization.learning_rate,
+        train_config.optimization.weight_decay,
+        train_config.seed,
+        train_config.num_workers,
     )
 
-    # Save results
-    torch.save(best_model.state_dict(), "best_model.pth")
-    save_training_results(metrics, run_dir, logger)
+    metrics = TrainingMetrics()
+    best_model, metrics = pipeline.fit_kfold(metrics)
+    pipeline.save_training_results(best_model, metrics, run_dir)
 
-    # Analyze results
-    detailed_metrics = metrics.to_dataframe()
-    fold_summary = metrics.get_fold_summary()
-    print(f"Best fold: {metrics.best_fold + 1}")
-    print(f"Best val loss: {metrics.best_val_loss}")
+    logger.info(f"Best fold: {metrics.best_fold + 1}")
+    logger.info(f"Best val loss: {metrics.best_val_loss}")

@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 import logging
 from pathlib import Path
 import sys
-from typing import Any, Optional
+from typing import Any
 
 
 from anndata import AnnData
@@ -71,51 +71,120 @@ class ImputationDataset(Dataset):
 
 @dataclass
 class TrainingMetrics:
-    """Container for tracking training metrics across epochs and folds."""
+    """Container for tracking training metrics across epochs and folds.
+
+    This class stores per-epoch training and validation metrics for each fold,
+    identifies the best-performing fold based on validation loss, and provides
+    utility methods to export the collected metrics for further analysis or
+    visualization.
+
+    :param dict[int, dict[str, list[float]]] fold_metrics: Mapping of fold numbers to their associated metrics.
+    :param Optional[int] best_fold: Index of the fold with the best validation performance.
+    :param float best_val_loss: Lowest validation loss observed across all folds.
+    :param Optional[dict[str, Any]] best_model_state: State dictionary of the best-performing model.
+    """
 
     fold_metrics: dict[int, dict[str, list[float]]] = field(default_factory=dict)
-    best_fold: Optional[int] = None
+    best_fold: int | None = None
     best_val_loss: float = float("inf")
-    best_model_state: Optional[dict[str, Any]] = None
+    best_model_state: dict[str, Any] | None = None
 
-    def add_fold_epoch(self, fold: int, epoch: int, train_loss: float, val_loss: float):
-        """Add metrics for a specific fold and epoch."""
+    def add_fold_epoch(
+        self,
+        fold: int,
+        epoch: int,
+        train_loss: float,
+        grad_norm: float,
+        max_grad: float,
+        val_loss: float,
+    ):
+        """Add metrics for a specific epoch and fold.
+
+        Initializes a new fold entry if it does not exist, then appends the
+        given metrics to the corresponding lists.
+
+        :param int fold: Fold index (0-based).
+        :param int epoch: Epoch number (0-based).
+        :param float train_loss: Training loss for the current epoch.
+        :param float grad_norm: L2 norm of the gradients.
+        :param float max_grad: Maximum gradient value in the epoch.
+        :param float val_loss: Validation loss for the current epoch.
+        """
         if fold not in self.fold_metrics:
-            self.fold_metrics[fold] = {"epochs": [], "train_loss": [], "val_loss": []}
+            self.fold_metrics[fold] = {
+                "epochs": [],
+                "train_loss": [],
+                "grad_norm": [],
+                "max_grad": [],
+                "val_loss": [],
+            }
 
         self.fold_metrics[fold]["epochs"].append(epoch)
         self.fold_metrics[fold]["train_loss"].append(train_loss)
+        self.fold_metrics[fold]["grad_norm"].append(grad_norm)
+        self.fold_metrics[fold]["max_grad"].append(max_grad)
         self.fold_metrics[fold]["val_loss"].append(val_loss)
 
     def update_best_model(
-        self, fold: int, val_loss: float, model_state: dict[str, Any]
+        self,
+        fold: int,
+        val_loss: float,
+        model_state: dict[str, Any],
     ):
-        """Update best model if current validation loss is better."""
+        """Update the best model if the current validation loss is lower.
+
+        Stores the model state and updates fold metadata if the new validation
+        loss is better than any previously recorded value.
+
+        :param int fold: Fold index of the current model.
+        :param float val_loss: Validation loss to compare against the best.
+        :param dict[str, Any] model_state: State dictionary of the model.
+        """
         if val_loss < self.best_val_loss:
             self.best_val_loss = val_loss
             self.best_fold = fold
             self.best_model_state = copy.deepcopy(model_state)
 
-    def to_dataframe(self) -> pd.DataFrame:
-        """Convert metrics to a comprehensive DataFrame."""
-        all_data = []
+    def to_data_frame(self) -> pd.DataFrame:
+        """Convert collected metrics to a long-format DataFrame.
+
+        The resulting DataFrame includes fold, epoch, training loss, gradient norm
+        max gradient norm and validation loss for each training epoch.
+
+        :return: DataFrame containing per-epoch training and validation metrics.
+        :rtype: pd.DataFrame
+        """
+        metrics = []
+
         for fold, metrics in self.fold_metrics.items():
             for i, epoch in enumerate(metrics["epochs"]):
-                all_data.append(
+                metrics.append(
                     {
                         "fold": fold,
                         "epoch": epoch,
                         "train_loss": metrics["train_loss"][i],
+                        "grad_norm": metrics["grad_norm"][i],
+                        "max_grad": metrics["max_grad"][i],
                         "val_loss": metrics["val_loss"][i],
                     }
                 )
-        return pd.DataFrame(all_data)
+
+        return pd.DataFrame(metrics)
 
     def get_fold_summary(self) -> pd.DataFrame:
-        """Get summary statistics per fold."""
-        summary_data = []
+        """Summarize metrics per fold.
+
+        Provides a summary DataFrame containing the final training loss,
+        final validation loss, minimum validation loss, and number of epochs
+        trained for each fold.
+
+        :return: DataFrame with one row per fold summarizing training outcomes.
+        :rtype: pd.DataFrame
+        """
+        summary = []
+
         for fold, metrics in self.fold_metrics.items():
-            summary_data.append(
+            summary.append(
                 {
                     "fold": fold,
                     "final_train_loss": (
@@ -130,7 +199,8 @@ class TrainingMetrics:
                     "epochs_trained": len(metrics["epochs"]),
                 }
             )
-        return pd.DataFrame(summary_data)
+
+        return pd.DataFrame(summary)
 
 
 def assert_path(path: str, assert_dir: bool = True) -> Path:
@@ -206,7 +276,7 @@ def setup_logging(path_to_log: str, logger_name: str) -> logging.Logger:
 
     # Custom formatter
     formatter = logging.Formatter(
-        "%(asctime)s || LEVEL: %(levelname)s |> %(message)s",
+        "[%(levelname)s] %(asctime)s |> %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 

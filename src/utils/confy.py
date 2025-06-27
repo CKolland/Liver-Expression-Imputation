@@ -12,16 +12,31 @@ import fit.constants as C
 
 @dataclass
 class DataCSV:
-    """Configuration for a ".csv" dataset.
+    """Configuration for a CSV dataset.
+
+    This class represents the configuration required to load a ".csv" dataset. It includes
+    the path to the file, the dataset type (which defaults to "csv"), and an optional header
+    flag that determines whether the file includes a header row.
 
     :param str path: Path to the ".csv" file.
-    :param str type: Type identifier, defaults to "csv".
-    :param Optional[int] header: Whether the ".csv" file has a header row (e.g., 0 or None).
+    :param str type: Type identifier for the dataset, defaults to "csv".
+    :param Optional[int] header: Indicates if the CSV has a header row.
+                                 Use 0 if a header is present, or None otherwise.
     """
 
     path: str
     type: str = "csv"
     header: Optional[int] = None
+
+    def __post_init__(self) -> None:
+        """Post-initialization processing.
+
+        Converts the 'header' attribute from string "none" to None to standardize
+        the representation of missing headers.
+        """
+        # Normalize string input for 'header' to appropriate None value
+        if self.header == "none":
+            self.header = None
 
 
 @dataclass
@@ -39,7 +54,7 @@ class DataH5AD:
 
 
 @dataclass
-class DatasetCollection:
+class DataCollection:
     """Handles a collection of dataset configurations, auto-instantiating them as
     either `DataCSV` or `DataH5AD` instances based on their type.
 
@@ -156,7 +171,7 @@ class OptimizationConfig:
     weight_decay: float = 1e-4
 
     @staticmethod
-    def _get_optimizer(name: str) -> optim.Optimizer:
+    def get_optimizer(name: str) -> optim.Optimizer:
         """_summary_
 
         :param name: _description_
@@ -185,6 +200,7 @@ class OptimizationConfig:
 class TrainingConfig:
     """Main training configuration."""
 
+    seed: int
     loss: nn.Module
     kfolds: int = 5
     batch_size: int = 128
@@ -250,7 +266,7 @@ def get_loss(name: str) -> nn.Module:
     return available[name]
 
 
-def setup_dataset(dataset: dict) -> Union[DataCSV, DataH5AD, DatasetCollection]:
+def setup_dataset(dataset: dict) -> Union[DataCSV, DataH5AD, DataCollection]:
     """Factory function to instantiate a dataset object or a collection of datasets.
 
     - If the input is a single dataset dictionary with "path" and "type",
@@ -273,7 +289,7 @@ def setup_dataset(dataset: dict) -> Union[DataCSV, DataH5AD, DatasetCollection]:
             raise ValueError(f"Unsupported dataset type: {dataset['type']}")
     # Handle dataset collection
     else:
-        return DatasetCollection(dataset)
+        return DataCollection(dataset)
 
 
 def setup_model(model: dict) -> ModelConfig:
