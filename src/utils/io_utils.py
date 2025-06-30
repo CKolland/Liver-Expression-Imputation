@@ -30,8 +30,8 @@ class ImputationDataset(Dataset):
         :param AnnData adata: The annotated data matrix
         :param list[str] input_subset: List of gene names that are used as input
         """
-        self.adata = adata
-        self.input_subset = input_subset
+        self.input = adata[:, input_subset].X.toarray().astype(np.float32)
+        self.label = adata.X.toarray().astype(np.float32)
 
     def __len__(self) -> int:
         """Return the number of samples in the dataset.
@@ -39,7 +39,7 @@ class ImputationDataset(Dataset):
         :return: Number of rows (cells) in the AnnData object
         :rtype: int
         """
-        return self.adata.shape[0]
+        return self.input.shape[0]
 
     def __getitem__(self, idx: int) -> tuple[Tensor, Tensor]:
         """Retrieve the input features and corresponding label for a given index.
@@ -52,22 +52,9 @@ class ImputationDataset(Dataset):
 
         :return: A tuple containing the input tensor and the label tensor
         :rtype: tuple[Tensor, Tensor]
-
-        :raises IndexError: If the provided index is out of range
         """
-        if idx >= len(self):
-            raise IndexError("Index out of range")
-
-        # Select row of reduced features from AnnData object
-        # `.toarray()` converts to dense array
-        # `.squeeze()` converts to one-dimensional vector
-        input = self.adata[:, self.input_subset].X.getrow(idx).toarray().squeeze()
-
-        # Retrieve the corresponding annotation label
-        label = self.adata.X.getrow(idx).toarray().squeeze()
-
         # Convert the row to a PyTorch tensor
-        return tensor(input, dtype=float32), tensor(label, dtype=float32)
+        return tensor(self.input[idx]), tensor(self.label[idx], dtype=float32)
 
 
 @dataclass

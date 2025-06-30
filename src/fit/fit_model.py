@@ -129,7 +129,7 @@ def test_model_fitting():
         learning_rate=1e-3,
         weight_decay=1e-4,
         seed=seed,
-        num_workers=4,
+        num_workers=8,
     )
 
     metrics = TrainingMetrics()

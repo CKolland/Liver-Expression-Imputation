@@ -353,12 +353,18 @@ class TrainingPipeline:
                 batch_size=self.batch_size,
                 sampler=SubsetRandomSampler(train_idx),
                 num_workers=self.num_workers,
+                pin_memory=True if torch.cuda.is_available() else False,
+                prefetch_factor=4,
+                persistent_workers=True,
             )
             val_loader = DataLoader(
                 dataset=self.dataset,
                 batch_size=self.batch_size,
                 sampler=SubsetRandomSampler(val_idx),
                 num_workers=self.num_workers,
+                pin_memory=True,
+                prefetch_factor=4,
+                persistent_workers=True,
             )
 
             # Instantiate a fresh copy of the model and move it to the target device

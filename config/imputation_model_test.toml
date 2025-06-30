@@ -36,6 +36,7 @@ kfolds = 2
 batch_size = 128
 epochs = 1
 loss = "mse"
+num_workers = 8
 
 [training.early_stopping]
 patience = 20
