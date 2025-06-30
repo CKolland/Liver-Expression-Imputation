@@ -1,7 +1,7 @@
 import argparse
 
 import fit.constants as C
-from fit.fit_model import fit_model
+from fit.fit_model import fit_model, test_model_fitting
 
 
 def main():
@@ -15,21 +15,30 @@ def main():
         C.CONFIG_LONG,
         C.CONFIG_SHORT,
         type=str,
-        required=True,
         help=C.CONFIG_HELP,
     )
     parser.add_argument(
         C.OUTPUT_LONG,
         C.OUTPUT_SHORT,
         type=str,
-        required=True,
         help=C.OUTPUT_HELP,
+    )
+    parser.add_argument(
+        C.TEST_LONG,
+        C.TEST_SHORT,
+        action="store_true",
+        help=C.TEST_HELP,
     )
 
     # Parse command-line arguments
     args = parser.parse_args()
 
-    fit_model(args.config, args.output)
+    if args.test:
+        test_model_fitting()
+    else:
+        if not args.config or not args.output:
+            parser.error(C.PARSER_ERR)
+        fit_model(args.config, args.output)
 
 
 if __name__ == "__main__":

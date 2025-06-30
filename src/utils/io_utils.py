@@ -5,13 +5,14 @@ from pathlib import Path
 import sys
 from typing import Any
 
-
 from anndata import AnnData
 import numpy as np
 import pandas as pd
 import tomli
 from torch import float32, tensor, Tensor
 from torch.utils.data import Dataset
+
+import fit.constants as C
 
 
 class ImputationDataset(Dataset):
@@ -275,10 +276,7 @@ def setup_logging(path_to_log: str, logger_name: str) -> logging.Logger:
     logger.setLevel(logging.DEBUG)  # Lowest log level (logs everything)
 
     # Custom formatter
-    formatter = logging.Formatter(
-        "[%(levelname)s] %(asctime)s |> %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
+    formatter = logging.Formatter(C.LOGGING_FORMAT, datefmt=C.LOGGING_DATEFMT)
 
     # Add console handler
     console_handler = logging.StreamHandler(sys.stdout)
