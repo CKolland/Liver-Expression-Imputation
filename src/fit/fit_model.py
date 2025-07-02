@@ -143,14 +143,7 @@ def test_model_fitting():
     formatted_time = str(timedelta(seconds=int(elapsed_time)))
     logger.info(f"Model fitting took: {formatted_time} (HH:MM:SS)")
 
-    pipeline.save_training_results(
-        best_model,
-        metrics,
-        Path("./test_run").mkdir(
-            parents=True,
-            exist_ok=True,
-        ),
-    )
+    pipeline.save_training_results(best_model, metrics, Path("."))
 
 
 def fit_model(path_to_setup: str, path_to_out: str):
