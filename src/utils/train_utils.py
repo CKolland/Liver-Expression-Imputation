@@ -9,6 +9,7 @@ from sklearn.model_selection import KFold
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader, Dataset, SubsetRandomSampler
 from tqdm import tqdm
 
@@ -236,6 +237,9 @@ class TrainingPipeline:
             loss = self.criterion(y_hat, y).sum(-1).mean()  # Compute average batch loss
             loss.backward()  # Backpropagation
 
+            # Gradient clipping
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
+
             # Compute L2 norm and maximum of gradients for monitoring
             batch_max_grad = 0.0
             total_norm_squared = 0.0
@@ -374,6 +378,16 @@ class TrainingPipeline:
             # Create optimizer for current model parameters
             optimizer = self._setup_optimizer(fold_model)
 
+            # Create scheduler
+            scheduler = ReduceLROnPlateau(
+                optimizer,
+                mode="min",  # We want to minimize validation loss
+                factor=0.5,  # Multiply learning rate by 0.5 when triggered
+                patience=5,  # Wait 5 epochs before reducing
+                min_lr=1e-7,  # Don't go below this learning rate
+                verbose=True,
+            )
+
             # Initialize early stopping for this fold
             early_stopping = EarlyStopping(patience=self.patience, delta=self.delta)
 
@@ -383,6 +397,9 @@ class TrainingPipeline:
                     fold, epoch, train_loader, optimizer
                 )
                 val_loss = self._validate_epoch(fold, epoch, val_loader)
+
+                # Scheduler step after validation
+                scheduler.step(val_loss)
 
                 # Record metrics
                 metrics.add_fold_epoch(
@@ -497,34 +514,15 @@ class TestingPipeline:
 
         targets, predictions = [], []
         with torch.no_grad():
-            for batch_idx, (data, target) in tqdm(
-                enumerate(test_loader),
-                total=len(test_loader),
-                desc=f"Testing",
-            ):
-                data, target = data.to(device), target.to(device)
-
-                output = model(data)
-
-                targets.append(target.cpu().numpy())
-                predictions.append(output.y.cpu().numpy())
-
-        # Disable gradient calculations for validation to save memory and speed up computation
-        with torch.no_grad():
-            # Create a progress bar to monitor validation progress
-            pbar = tqdm(val_loader, desc=f"Fold {fold + 1} - Val Epoch {epoch + 1}")
+            # Create a progress bar to monitor testing progress
+            pbar = tqdm(self.test_loader, desc=f"Test")
             for x, y in pbar:
-                # Move input and target tensors to the specified device
                 x, y = x.to(self.device), y.to(self.device)
 
-                y_hat = self.model(x)  # Forward pass
-                loss = self.criterion(y_hat, y).sum(-1).mean()  # Average batch loss
+                y_hat = self.model(x)
 
-                # Accumulate batch loss
-                epoch_loss += loss.item()
-
-                # Update progress bar with current batch loss
-                pbar.set_postfix({"loss": f"{loss.item():.6f}"})
+                targets.append(y)
+                predictions.append(y_hat)
 
         # Concatenate all batches
         targets = np.vstack(targets)  # Shape: (n_samples, n_genes)
