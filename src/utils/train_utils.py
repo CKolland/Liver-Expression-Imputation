@@ -251,7 +251,7 @@ class TrainingPipeline:
 
             # Accumulate metrics
             epoch_loss += loss.item()
-            epoch_grad_norm += total_norm_squared**0.5
+            epoch_grad_norm += (total_norm_squared**0.5).item()
             epoch_max_grad = max(epoch_max_grad, batch_max_grad)
 
             # Update progress bar with current batch loss
@@ -472,31 +472,66 @@ class TrainingPipeline:
             self.logger.error(f"Failed to save training results: {e}")
 
 
-def test(model: nn.Module, test_loader: DataLoader, device: str, logger: Logger):
-    """Not finished implementing"""
-    # Set model to validation mode
-    model.eval()
+class TestingPipeline:
+    """_summary_"""
 
-    targets, predictions = [], []
-    with torch.no_grad():
-        for batch_idx, (data, target) in tqdm(
-            enumerate(test_loader),
-            total=len(test_loader),
-            desc=f"Testing",
-        ):
-            data, target = data.to(device), target.to(device)
+    def __init__(
+        self,
+        test_loader: DataLoader,
+        model: nn.Module,
+        device: torch.device,
+        logger: Logger | None = None,
+    ):
+        self.test_loader: DataLoader = test_loader
+        self.model: nn.Module = model
+        self.device: torch.device = device
+        self.logger: Logger | None = logger
 
-            output = model(data)
+    def _load_model(self):
+        """_summary_"""
+        pass
 
-            targets.append(target.cpu().numpy())
-            predictions.append(output.y.cpu().numpy())
+    def test(self):
+        """_summary_"""
+        self.model.eval()  # Set model to evaluation mode
 
-    # Concatenate all batches
-    targets = np.vstack(targets)  # Shape: (n_samples, n_genes)
-    predictions = np.vstack(predictions)
+        targets, predictions = [], []
+        with torch.no_grad():
+            for batch_idx, (data, target) in tqdm(
+                enumerate(test_loader),
+                total=len(test_loader),
+                desc=f"Testing",
+            ):
+                data, target = data.to(device), target.to(device)
 
-    # Create AnnData to store results
-    adata = ad.AnnData(X=targets)
-    adata.layers["predictions"] = predictions
+                output = model(data)
 
-    return adata
+                targets.append(target.cpu().numpy())
+                predictions.append(output.y.cpu().numpy())
+
+        # Disable gradient calculations for validation to save memory and speed up computation
+        with torch.no_grad():
+            # Create a progress bar to monitor validation progress
+            pbar = tqdm(val_loader, desc=f"Fold {fold + 1} - Val Epoch {epoch + 1}")
+            for x, y in pbar:
+                # Move input and target tensors to the specified device
+                x, y = x.to(self.device), y.to(self.device)
+
+                y_hat = self.model(x)  # Forward pass
+                loss = self.criterion(y_hat, y).sum(-1).mean()  # Average batch loss
+
+                # Accumulate batch loss
+                epoch_loss += loss.item()
+
+                # Update progress bar with current batch loss
+                pbar.set_postfix({"loss": f"{loss.item():.6f}"})
+
+        # Concatenate all batches
+        targets = np.vstack(targets)  # Shape: (n_samples, n_genes)
+        predictions = np.vstack(predictions)
+
+        # Create AnnData to store results
+        adata = ad.AnnData(X=targets)
+        adata.layers["predictions"] = predictions
+
+        return adata

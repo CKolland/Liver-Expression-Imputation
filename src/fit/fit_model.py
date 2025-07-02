@@ -135,15 +135,14 @@ def test_model_fitting():
     metrics = TrainingMetrics()
 
     start_time = time.time()
-    _, metrics = pipeline.fit_kfold(metrics)
+    best_model, metrics = pipeline.fit_kfold(metrics)
     end_time = time.time()
 
     elapsed_time = end_time - start_time
     formatted_time = str(timedelta(seconds=int(elapsed_time)))
-
     logger.info(f"Model fitting took: {formatted_time} (HH:MM:SS)")
-    logger.info(f"Best fold: {metrics.best_fold + 1}")
-    logger.info(f"Best val loss: {metrics.best_val_loss}")
+
+    pipeline.save_training_results(best_model, metrics, "./test_run")
 
 
 def fit_model(path_to_setup: str, path_to_out: str):
@@ -238,6 +237,3 @@ def fit_model(path_to_setup: str, path_to_out: str):
     metrics = TrainingMetrics()
     best_model, metrics = pipeline.fit_kfold(metrics)
     pipeline.save_training_results(best_model, metrics, run_dir)
-
-    logger.info(f"Best fold: {metrics.best_fold + 1}")
-    logger.info(f"Best val loss: {metrics.best_val_loss}")
