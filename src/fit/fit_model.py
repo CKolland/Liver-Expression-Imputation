@@ -136,14 +136,12 @@ def test_model_fitting():
     metrics = TrainingMetrics()
 
     start_time = time.time()
-    best_model, metrics = pipeline.fit_kfold(metrics)
+    _, metrics = pipeline.fit_kfold(metrics)
     end_time = time.time()
 
     elapsed_time = end_time - start_time
     formatted_time = str(timedelta(seconds=int(elapsed_time)))
     logger.info(f"Model fitting took: {formatted_time} (HH:MM:SS)")
-
-    pipeline.save_training_results(best_model, metrics, Path("."))
 
 
 def fit_model(path_to_setup: str, path_to_out: str):
