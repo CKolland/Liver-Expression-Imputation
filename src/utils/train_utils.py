@@ -385,7 +385,6 @@ class TrainingPipeline:
                 factor=0.5,  # Multiply learning rate by 0.5 when triggered
                 patience=5,  # Wait 5 epochs before reducing
                 min_lr=1e-7,  # Don't go below this learning rate
-                verbose=True,
             )
 
             # Initialize early stopping for this fold
