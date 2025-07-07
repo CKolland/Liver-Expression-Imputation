@@ -23,11 +23,6 @@ name = "liver_imputation_v2"
 type = "mlp"
 n_layers = 3
 
-[model]
-name = "liver_imputation_v2"
-type = "mlp"
-n_layers = 3
-
 [model.layers.layer1]
 type = "linear"
 in_dim = 931
