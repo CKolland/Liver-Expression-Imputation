@@ -398,6 +398,7 @@ class TrainingPipeline:
             early_stopping = EarlyStopping(patience=self.patience, delta=self.delta)
 
             # Epoch-wise training and validation loop
+            self.logger.info(torch.cuda.memory_summary())
             for epoch in range(self.epochs):
                 train_loss, grad_norm, max_grad = self._train_epoch(
                     fold,
@@ -432,6 +433,8 @@ class TrainingPipeline:
                 if early_stopping.early_stop:
                     self.logger.info(f"Early stopping triggered at Epoch {epoch + 1}")
                     break
+
+                self.logger.info(torch.cuda.memory_summary())
 
             # Determine best model for the fold based on validation loss
             fold_best_val_loss = (
