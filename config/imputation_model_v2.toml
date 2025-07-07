@@ -46,12 +46,12 @@ dropout = 0.2
 seed = 27062025
 kfolds = 5
 batch_size = 128
-epochs = 10
+epochs = 50
 loss = "mse"
 num_workers = 8
 
 [training.early_stopping]
-patience = 5
+patience = 10
 delta = 0
 
 [training.optimization]
