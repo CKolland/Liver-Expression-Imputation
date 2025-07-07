@@ -197,7 +197,6 @@ class TrainingPipeline:
         fold: int,
         epoch: int,
         train_loader: DataLoader,
-        model: nn.Module,
         optimizer: optim.Optimizer,
     ) -> tuple[float, float, float]:
         """Train the model for a single epoch and return training statistics.
@@ -218,8 +217,6 @@ class TrainingPipeline:
         :type epoch: int
         :param DataLoader train_loader: PyTorch DataLoader yielding training batches.
         :type train_loader: DataLoader
-        :param model: Model that is trained on the data.
-        :type model: nn.Module
         :param optim.Optimizer optimizer: Optimizer instance used to update model parameters.
         :type optimizer: optim.Optimizer
 
@@ -229,7 +226,7 @@ class TrainingPipeline:
             (3) Maximum absolute gradient value seen in any parameter
         :rtype: tuple[float, float, float]
         """
-        model.train()  # Set model to training mode
+        self.model.train()  # Set model to training mode
         epoch_loss = 0.0
         epoch_grad_norm = 0.0
         epoch_max_grad = 0.0
@@ -243,7 +240,7 @@ class TrainingPipeline:
             optimizer.zero_grad()  # Clear previous gradients
 
             # Forward pass to create prediction (y_hat)
-            y_hat = model(x)
+            y_hat = self.model(x)
 
             loss = self.criterion(y_hat, y).sum(-1).mean()  # Compute average batch loss
             loss.backward()  # Backpropagation
@@ -251,7 +248,7 @@ class TrainingPipeline:
             # Compute L2 norm and maximum of gradients for monitoring
             batch_max_grad = 0.0
             total_norm_squared = 0.0
-            for param in model.parameters():
+            for param in self.model.parameters():
                 if param.grad is not None:
                     param_norm_squared = param.grad.norm(2) ** 2
                     total_norm_squared += param_norm_squared
@@ -284,7 +281,6 @@ class TrainingPipeline:
         fold: int,
         epoch: int,
         val_loader: DataLoader,
-        model: nn.Module,
     ) -> float:
         """Validate the model for a single epoch and return the average loss.
 
@@ -300,13 +296,11 @@ class TrainingPipeline:
         :type epoch: int
         :param DataLoader val_loader: PyTorch DataLoader providing validation batches.
         :type val_loader: DataLoader
-        :param model: Model that is used for validation.
-        :type model: nn.Module
 
         :return: Average validation loss over all batches
         :rtype: float
         """
-        model.eval()  # Set model to evaluation mode
+        self.model.eval()  # Set model to evaluation mode
         epoch_loss = 0.0
 
         # Disable gradient calculations for validation to save memory and speed up computation
@@ -317,7 +311,7 @@ class TrainingPipeline:
                 # Move input and target tensors to the specified device
                 x, y = x.to(self.device), y.to(self.device)
 
-                y_hat = model(x)  # Forward pass
+                y_hat = self.model(x)  # Forward pass
                 loss = self.criterion(y_hat, y).sum(-1).mean()  # Average batch loss
 
                 # Accumulate batch loss
@@ -392,9 +386,8 @@ class TrainingPipeline:
                 pin_memory=True,
             )
 
-            # Instantiate a fresh copy of the model and move it to the target device
-            fold_model = copy.deepcopy(self.model)
-            fold_model.to(self.device)
+            # Reset weights of model in fresh fold
+            self.model.reset_weights()
 
             # Create optimizer for current model parameters
             optimizer = self._setup_optimizer(fold_model)
@@ -408,14 +401,12 @@ class TrainingPipeline:
                     fold,
                     epoch,
                     train_loader,
-                    fold_model,
                     optimizer,
                 )
                 val_loss = self._validate_epoch(
                     fold,
                     epoch,
                     val_loader,
-                    fold_model,
                 )
 
                 # Record metrics
@@ -464,7 +455,7 @@ class TrainingPipeline:
         self.logger.info("----")
         self.logger.info(f"✅ Cross-validation completed!")
         self.logger.info(
-            f"Best model from fold {metrics.best_fold + 1} with val loss: {metrics.best_val_loss:.6f}"
+            f"Best model from fold {metrics.best_fold + 1} with val loss: {-metrics.best_val_loss:.6f}"
         )
 
         return best_model, metrics

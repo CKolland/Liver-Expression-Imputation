@@ -27,3 +27,11 @@ class MLP(nn.Module):
         :return torch.Tensor: Output tensor after passing through the layers.
         """
         return self.layers(x)
+
+    def reset_weights(self):
+        """
+        Reset model weights to avoid weight leakage.
+        """
+        for layer in self.children():
+            if hasattr(layer, "reset_parameters"):
+                layer.reset_parameters()
