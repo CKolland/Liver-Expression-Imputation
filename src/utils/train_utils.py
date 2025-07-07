@@ -187,6 +187,7 @@ class TrainingPipeline:
     def _train_epoch(
         self,
         fold: int,
+        model: nn.Module,
         epoch: int,
         train_loader: DataLoader,
         optimizer: optim.Optimizer,
@@ -205,6 +206,8 @@ class TrainingPipeline:
 
         :param fold: Index of the current fold in K-fold cross-validation (0-based).
         :type fold: int
+        :param model: Model that is trained on the data.
+        :type model: nn.Module
         :param int epoch: Index of the current epoch (0-based).
         :type epoch: int
         :param DataLoader train_loader: PyTorch DataLoader yielding training batches.
@@ -218,7 +221,7 @@ class TrainingPipeline:
             (3) Maximum absolute gradient value seen in any parameter
         :rtype: tuple[float, float, float]
         """
-        self.model.train()  # Set model to training mode
+        model.train()  # Set model to training mode
         epoch_loss = 0.0
         epoch_grad_norm = 0.0
         epoch_max_grad = 0.0
@@ -232,18 +235,18 @@ class TrainingPipeline:
             optimizer.zero_grad()  # Clear previous gradients
 
             # Forward pass to create prediction (y_hat)
-            y_hat = self.model(x)
+            y_hat = model(x)
 
             loss = self.criterion(y_hat, y).sum(-1).mean()  # Compute average batch loss
             loss.backward()  # Backpropagation
 
             # Gradient clipping
-            torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
 
             # Compute L2 norm and maximum of gradients for monitoring
             batch_max_grad = 0.0
             total_norm_squared = 0.0
-            for param in self.model.parameters():
+            for param in model.parameters():
                 if param.grad is not None:
                     param_norm_squared = param.grad.norm(2) ** 2
                     total_norm_squared += param_norm_squared
@@ -268,7 +271,9 @@ class TrainingPipeline:
             epoch_max_grad,
         )
 
-    def _validate_epoch(self, fold: int, epoch: int, val_loader: DataLoader) -> float:
+    def _validate_epoch(
+        self, fold: int, model: nn.Module, epoch: int, val_loader: DataLoader
+    ) -> float:
         """Validate the model for a single epoch and return the average loss.
 
         This method evaluates the model performance on the validation set provided
@@ -279,6 +284,8 @@ class TrainingPipeline:
 
         :param fold: Current fold number in cross-validation (0-indexed).
         :type fold: int
+        :param model: Model that is used for validation.
+        :type model: nn.Module
         :param int epoch: Current epoch number (0-indexed).
         :type epoch: int
         :param DataLoader val_loader: PyTorch DataLoader providing validation batches.
@@ -287,7 +294,7 @@ class TrainingPipeline:
         :return: Average validation loss over all batches
         :rtype: float
         """
-        self.model.eval()  # Set model to evaluation mode
+        model.eval()  # Set model to evaluation mode
         epoch_loss = 0.0
 
         # Disable gradient calculations for validation to save memory and speed up computation
@@ -298,7 +305,7 @@ class TrainingPipeline:
                 # Move input and target tensors to the specified device
                 x, y = x.to(self.device), y.to(self.device)
 
-                y_hat = self.model(x)  # Forward pass
+                y_hat = model(x)  # Forward pass
                 loss = self.criterion(y_hat, y).sum(-1).mean()  # Average batch loss
 
                 # Accumulate batch loss
@@ -393,9 +400,13 @@ class TrainingPipeline:
             # Epoch-wise training and validation loop
             for epoch in range(self.epochs):
                 train_loss, grad_norm, max_grad = self._train_epoch(
-                    fold, epoch, train_loader, optimizer
+                    fold,
+                    fold_model,
+                    epoch,
+                    train_loader,
+                    optimizer,
                 )
-                val_loss = self._validate_epoch(fold, epoch, val_loader)
+                val_loss = self._validate_epoch(fold, fold_model, epoch, val_loader)
 
                 # Scheduler step after validation
                 scheduler.step(val_loss)
