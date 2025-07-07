@@ -1,4 +1,9 @@
 import argparse
+import os
+
+# Enable expandable CUDA memory segments to reduce fragmentation
+# Helps prevent CUDA OOM errors in multi-phase training (e.g., K-Fold CV)
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
 import fit.constants as C
 from fit.fit_model import fit_model, test_model_fitting

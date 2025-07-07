@@ -12,7 +12,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from fit.model import MLP
+from utils.model import MLP
 import utils.confy as confy
 import utils.io_utils as io
 from utils.io_utils import ImputationDataset, TrainingMetrics

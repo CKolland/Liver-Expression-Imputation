@@ -455,7 +455,7 @@ class TrainingPipeline:
             )
 
             # Clear intermediate modules
-            del fold_model, optimizer, early_stopping
+            del fold_model, optimizer, early_stopping, train_loader, val_loader
 
         # Load the best-performing model weights into a new model instance
         best_model = copy.deepcopy(self.model)
