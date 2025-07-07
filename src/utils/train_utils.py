@@ -447,8 +447,18 @@ class TrainingPipeline:
                 f"Fold {fold + 1} completed. Best val loss: {fold_best_val_loss:.6f}"
             )
 
+            del (
+                fold_model,
+                optimizer,
+                scheduler,
+                early_stopping,
+                train_loader,
+                val_loader,
+            )
+            torch.cuda.empty_cache()
+
         # Load the best-performing model weights into a new model instance
-        best_model = copy.deepcopy(self.model.cpu())
+        best_model = copy.deepcopy(self.model)
         best_model.load_state_dict(metrics.best_model_state)
 
         self.logger.info("----")
