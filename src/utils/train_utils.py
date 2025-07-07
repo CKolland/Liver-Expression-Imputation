@@ -1,4 +1,5 @@
 import copy
+import gc
 from logging import Logger
 from pathlib import Path
 from typing import Any
@@ -184,12 +185,19 @@ class TrainingPipeline:
 
         return optimizer
 
+    def _clear_gpu_memory(self):
+        """Clear GPU memory and run garbage collection."""
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            torch.cuda.synchronize()
+        gc.collect()
+
     def _train_epoch(
         self,
         fold: int,
-        model: nn.Module,
         epoch: int,
         train_loader: DataLoader,
+        model: nn.Module,
         optimizer: optim.Optimizer,
     ) -> tuple[float, float, float]:
         """Train the model for a single epoch and return training statistics.
@@ -206,12 +214,12 @@ class TrainingPipeline:
 
         :param fold: Index of the current fold in K-fold cross-validation (0-based).
         :type fold: int
-        :param model: Model that is trained on the data.
-        :type model: nn.Module
         :param int epoch: Index of the current epoch (0-based).
         :type epoch: int
         :param DataLoader train_loader: PyTorch DataLoader yielding training batches.
         :type train_loader: DataLoader
+        :param model: Model that is trained on the data.
+        :type model: nn.Module
         :param optim.Optimizer optimizer: Optimizer instance used to update model parameters.
         :type optimizer: optim.Optimizer
 
@@ -240,9 +248,6 @@ class TrainingPipeline:
             loss = self.criterion(y_hat, y).sum(-1).mean()  # Compute average batch loss
             loss.backward()  # Backpropagation
 
-            # Gradient clipping
-            # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-
             # Compute L2 norm and maximum of gradients for monitoring
             batch_max_grad = 0.0
             total_norm_squared = 0.0
@@ -264,6 +269,9 @@ class TrainingPipeline:
             # Update progress bar with current batch loss
             pbar.set_postfix({"loss": f"{loss.item():.6f}"})
 
+            # Clear intermediate tensors
+            del x, y, y_hat, loss
+
         # Return average loss, average gradient norm, and maximum gradient seen
         return (
             epoch_loss / len(train_loader),
@@ -272,7 +280,11 @@ class TrainingPipeline:
         )
 
     def _validate_epoch(
-        self, fold: int, model: nn.Module, epoch: int, val_loader: DataLoader
+        self,
+        fold: int,
+        epoch: int,
+        val_loader: DataLoader,
+        model: nn.Module,
     ) -> float:
         """Validate the model for a single epoch and return the average loss.
 
@@ -284,12 +296,12 @@ class TrainingPipeline:
 
         :param fold: Current fold number in cross-validation (0-indexed).
         :type fold: int
-        :param model: Model that is used for validation.
-        :type model: nn.Module
         :param int epoch: Current epoch number (0-indexed).
         :type epoch: int
         :param DataLoader val_loader: PyTorch DataLoader providing validation batches.
         :type val_loader: DataLoader
+        :param model: Model that is used for validation.
+        :type model: nn.Module
 
         :return: Average validation loss over all batches
         :rtype: float
@@ -313,6 +325,9 @@ class TrainingPipeline:
 
                 # Update progress bar with current batch loss
                 pbar.set_postfix({"loss": f"{loss.item():.6f}"})
+
+                # Clear intermediate tensors
+                del x, y, y_hat, loss
 
         # Return average validation loss across all batches
         return epoch_loss / len(val_loader)
@@ -358,6 +373,9 @@ class TrainingPipeline:
                 f"Train samples: {len(train_idx)}, Val samples: {len(val_idx)}"
             )
 
+            # Clear GPU memory before starting each fold
+            self._clear_gpu_memory()
+
             # Create data loaders with subset samplers for training and validation
             train_loader = DataLoader(
                 dataset=self.dataset,
@@ -365,8 +383,6 @@ class TrainingPipeline:
                 sampler=SubsetRandomSampler(train_idx),
                 num_workers=self.num_workers,
                 pin_memory=True if torch.cuda.is_available() else False,
-                prefetch_factor=4,
-                persistent_workers=True,
             )
             val_loader = DataLoader(
                 dataset=self.dataset,
@@ -374,8 +390,6 @@ class TrainingPipeline:
                 sampler=SubsetRandomSampler(val_idx),
                 num_workers=self.num_workers,
                 pin_memory=True,
-                prefetch_factor=4,
-                persistent_workers=True,
             )
 
             # Instantiate a fresh copy of the model and move it to the target device
@@ -392,12 +406,17 @@ class TrainingPipeline:
             for epoch in range(self.epochs):
                 train_loss, grad_norm, max_grad = self._train_epoch(
                     fold,
-                    fold_model,
                     epoch,
                     train_loader,
+                    fold_model,
                     optimizer,
                 )
-                val_loss = self._validate_epoch(fold, fold_model, epoch, val_loader)
+                val_loss = self._validate_epoch(
+                    fold,
+                    epoch,
+                    val_loader,
+                    fold_model,
+                )
 
                 # Record metrics
                 metrics.add_fold_epoch(
@@ -421,21 +440,22 @@ class TrainingPipeline:
                     self.logger.info(f"Early stopping triggered at Epoch {epoch + 1}")
                     break
 
-                self.logger.info(torch.cuda.memory_summary())
+                # Clear GPU memory after each epoch
+                self._clear_gpu_memory()
 
             # Determine best model for the fold based on validation loss
-            fold_best_val_loss = (
-                -early_stopping.best_val_loss
-                if early_stopping.best_val_loss
-                else val_loss
-            )
             metrics.update_best_model(
-                fold, fold_best_val_loss, early_stopping.best_model_state
+                fold,
+                early_stopping.best_val_loss,
+                early_stopping.best_model_state,
             )
 
             self.logger.info(
-                f"Fold {fold + 1} completed. Best val loss: {fold_best_val_loss:.6f}"
+                f"Fold {fold + 1} completed. Best val loss: {early_stopping.best_val_loss:.6f}"
             )
+
+            # Clear intermediate modules
+            del fold_model, optimizer, early_stopping
 
         # Load the best-performing model weights into a new model instance
         best_model = copy.deepcopy(self.model)
