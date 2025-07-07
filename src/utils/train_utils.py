@@ -372,7 +372,7 @@ class TrainingPipeline:
             )
 
             # Instantiate a fresh copy of the model and move it to the target device
-            fold_model = copy.deepcopy(self.model)
+            fold_model = copy.deepcopy(self.model.cpu())
             fold_model.to(self.device)
 
             # Create optimizer for current model parameters
@@ -437,7 +437,7 @@ class TrainingPipeline:
             )
 
         # Load the best-performing model weights into a new model instance
-        best_model = copy.deepcopy(self.model)
+        best_model = copy.deepcopy(self.model.cpu())
         best_model.load_state_dict(metrics.best_model_state)
 
         self.logger.info("----")
