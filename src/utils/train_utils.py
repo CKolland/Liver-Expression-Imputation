@@ -241,7 +241,7 @@ class TrainingPipeline:
             loss.backward()  # Backpropagation
 
             # Gradient clipping
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
 
             # Compute L2 norm and maximum of gradients for monitoring
             batch_max_grad = 0.0
@@ -379,26 +379,16 @@ class TrainingPipeline:
             )
 
             # Instantiate a fresh copy of the model and move it to the target device
-            fold_model = copy.deepcopy(self.model.cpu())
+            fold_model = copy.deepcopy(self.model)
             fold_model.to(self.device)
 
             # Create optimizer for current model parameters
             optimizer = self._setup_optimizer(fold_model)
 
-            # Create scheduler
-            scheduler = ReduceLROnPlateau(
-                optimizer,
-                mode="min",  # We want to minimize validation loss
-                factor=0.5,  # Multiply learning rate by 0.5 when triggered
-                patience=5,  # Wait 5 epochs before reducing
-                min_lr=1e-7,  # Don't go below this learning rate
-            )
-
             # Initialize early stopping for this fold
             early_stopping = EarlyStopping(patience=self.patience, delta=self.delta)
 
             # Epoch-wise training and validation loop
-            self.logger.info(torch.cuda.memory_summary())
             for epoch in range(self.epochs):
                 train_loss, grad_norm, max_grad = self._train_epoch(
                     fold,
@@ -408,9 +398,6 @@ class TrainingPipeline:
                     optimizer,
                 )
                 val_loss = self._validate_epoch(fold, fold_model, epoch, val_loader)
-
-                # Scheduler step after validation
-                scheduler.step(val_loss)
 
                 # Record metrics
                 metrics.add_fold_epoch(
@@ -449,16 +436,6 @@ class TrainingPipeline:
             self.logger.info(
                 f"Fold {fold + 1} completed. Best val loss: {fold_best_val_loss:.6f}"
             )
-
-            del (
-                fold_model,
-                optimizer,
-                scheduler,
-                early_stopping,
-                train_loader,
-                val_loader,
-            )
-            torch.cuda.empty_cache()
 
         # Load the best-performing model weights into a new model instance
         best_model = copy.deepcopy(self.model)

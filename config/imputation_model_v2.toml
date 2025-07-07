@@ -23,35 +23,40 @@ name = "liver_imputation_v2"
 type = "mlp"
 n_layers = 3
 
+[model]
+name = "liver_imputation_v2"
+type = "mlp"
+n_layers = 3
+
 [model.layers.layer1]
 type = "linear"
 in_dim = 931
-out_dim = 10000
+out_dim = 7762
 activation = "leaky_relu"
 
 [model.layers.layer2]
 type = "linear"
-in_dim = 10000
-out_dim = 20000
+in_dim = 7762
+out_dim = 15526
 activation = "leaky_relu"
 dropout = 0.2
 
 [model.layers.layer3]
 type = "linear"
-in_dim = 20000
+in_dim = 15526
 out_dim = 31053
 dropout = 0.2
 
 [training]
 seed = 27062025
 kfolds = 5
-batch_size = 256
-epochs = 500
+batch_size = 128
+epochs = 50
 loss = "mse"
 num_workers = 8
 
 [training.early_stopping]
-patience = 20
+patience = 5
 delta = 0
 
 [training.optimization]
