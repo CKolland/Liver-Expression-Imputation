@@ -266,9 +266,6 @@ class TrainingPipeline:
             # Update progress bar with current batch loss
             pbar.set_postfix({"loss": f"{loss.item():.6f}"})
 
-            # Clear intermediate tensors
-            del x, y, y_hat, loss
-
         # Return average loss, average gradient norm, and maximum gradient seen
         return (
             epoch_loss / len(train_loader),
@@ -319,9 +316,6 @@ class TrainingPipeline:
 
                 # Update progress bar with current batch loss
                 pbar.set_postfix({"loss": f"{loss.item():.6f}"})
-
-                # Clear intermediate tensors
-                del x, y, y_hat, loss
 
         # Return average validation loss across all batches
         return epoch_loss / len(val_loader)
@@ -390,7 +384,7 @@ class TrainingPipeline:
             self.model.reset_weights()
 
             # Create optimizer for current model parameters
-            optimizer = self._setup_optimizer(fold_model)
+            optimizer = self._setup_optimizer(self.model)
 
             # Initialize early stopping for this fold
             early_stopping = EarlyStopping(patience=self.patience, delta=self.delta)
@@ -426,7 +420,7 @@ class TrainingPipeline:
                 )
 
                 # Trigger early stopping if no improvement
-                early_stopping(val_loss, fold_model)
+                early_stopping(val_loss, self.model)
                 if early_stopping.early_stop:
                     self.logger.info(f"Early stopping triggered at Epoch {epoch + 1}")
                     break
@@ -444,9 +438,6 @@ class TrainingPipeline:
             self.logger.info(
                 f"Fold {fold + 1} completed. Best val loss: {early_stopping.best_val_loss:.6f}"
             )
-
-            # Clear intermediate modules
-            del fold_model, optimizer, early_stopping, train_loader, val_loader
 
         # Load the best-performing model weights into a new model instance
         best_model = copy.deepcopy(self.model)
