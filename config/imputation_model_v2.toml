@@ -44,7 +44,7 @@ dropout = 0.2
 
 [training]
 seed = 27062025
-kfolds = 5
+kfolds = 2
 batch_size = 128
 epochs = 50
 loss = "mse"

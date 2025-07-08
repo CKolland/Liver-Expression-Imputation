@@ -29,9 +29,15 @@ class MLP(nn.Module):
         return self.layers(x)
 
     def reset_weights(self):
+        """Recursively reset model weights to avoid weight leakage across K-Folds.
+
+        Applies `reset_parameters()` to every submodule that implements it.
+        This ensures that all learnable layers (e.g., Linear, Conv, BatchNorm)
+        are reinitialized before training each fold.
         """
-        Reset model weights to avoid weight leakage.
-        """
-        for layer in self.children():
-            if hasattr(layer, "reset_parameters"):
-                layer.reset_parameters()
+
+        def _reset(m: nn.Module):
+            if hasattr(m, "reset_parameters"):
+                m.reset_parameters()
+
+        self.apply(_reset)

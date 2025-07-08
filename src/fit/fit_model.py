@@ -16,7 +16,7 @@ from utils.model import MLP
 import utils.confy as confy
 import utils.io_utils as io
 from utils.io_utils import ImputationDataset, TrainingMetrics
-from utils.train_utils import TrainingPipeline
+from utils.fit import TrainingPipeline
 
 import fit.constants as C
 

@@ -405,8 +405,8 @@ class TrainingPipeline:
 
                 # Record metrics
                 metrics.add_fold_epoch(
-                    fold,
-                    epoch,
+                    fold + 1,
+                    epoch + 1,
                     train_loss,
                     grad_norm,
                     max_grad,
@@ -430,7 +430,7 @@ class TrainingPipeline:
 
             # Determine best model for the fold based on validation loss
             metrics.update_best_model(
-                fold,
+                fold + 1,
                 early_stopping.best_val_loss,
                 early_stopping.best_model_state,
             )
@@ -446,7 +446,7 @@ class TrainingPipeline:
         self.logger.info("----")
         self.logger.info(f"✅ Cross-validation completed!")
         self.logger.info(
-            f"Best model from fold {metrics.best_fold + 1} with val loss: {-metrics.best_val_loss:.6f}"
+            f"Best model from fold {metrics.best_fold + 1} with val loss: {abs(metrics.best_val_loss):.6f}"
         )
 
         return best_model, metrics
