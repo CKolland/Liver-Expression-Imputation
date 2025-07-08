@@ -10,7 +10,7 @@ from sklearn.model_selection import KFold
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 from torch.utils.data import DataLoader, Dataset, SubsetRandomSampler
 from tqdm import tqdm
 
@@ -182,6 +182,12 @@ class TrainingPipeline:
                 lr=self.learning_rate,
                 weight_decay=self.weight_decay,
             )
+        if self.optimizer == optim.AdamW:
+            optimizer = self.optimizer(
+                model.parameters(),
+                lr=self.learning_rate,
+                weight_decay=self.weight_decay,
+            )
 
         return optimizer
 
@@ -198,6 +204,7 @@ class TrainingPipeline:
         epoch: int,
         train_loader: DataLoader,
         optimizer: optim.Optimizer,
+        scheduler: optim.lr_scheduler._LRScheduler | None = None,
     ) -> tuple[float, float, float]:
         """Train the model for a single epoch and return training statistics.
 
@@ -219,6 +226,8 @@ class TrainingPipeline:
         :type train_loader: DataLoader
         :param optim.Optimizer optimizer: Optimizer instance used to update model parameters.
         :type optimizer: optim.Optimizer
+        :param scheduler: Optional learning rate scheduler that adjusts the optimizer's learning rate during training.
+        :type scheduler: torch.optim.lr_scheduler._LRScheduler or None
 
         :return: A tuple containing:
             (1) Average loss across all training batches
@@ -230,10 +239,13 @@ class TrainingPipeline:
         epoch_loss = 0.0
         epoch_grad_norm = 0.0
         epoch_max_grad = 0.0
+        num_batches = len(train_loader)
 
         # Create a progress bar to monitor training
-        pbar = tqdm(train_loader, desc=f"Fold {fold + 1} - Train Epoch {epoch + 1}")
-        for x, y in pbar:
+        pbar = tqdm(
+            enumerate(train_loader), desc=f"Fold {fold + 1} - Train Epoch {epoch + 1}"
+        )
+        for batch_idx, (x, y) in pbar:
             # Move input (x) and target (y) to the specified device
             x, y = x.to(self.device), y.to(self.device)
 
@@ -257,6 +269,9 @@ class TrainingPipeline:
                     batch_max_grad = max(batch_max_grad, param_max_grad)
 
             optimizer.step()  # Update model parameters
+
+            if scheduler is not None:
+                scheduler.step(epoch + batch_idx / num_batches)
 
             # Accumulate metrics
             epoch_loss += loss.item()
@@ -385,6 +400,12 @@ class TrainingPipeline:
 
             # Create optimizer for current model parameters
             optimizer = self._setup_optimizer(self.model)
+
+            # Create learning rate scheduler
+            T_0 = len(train_loader) * 5  # 5 epochs worth of batches
+            T_mult = 2  # Double each restart
+            eta_min = 1e-7
+            scheduler = CosineAnnealingWarmRestarts(optimizer, T_0, T_mult, eta_min)
 
             # Initialize early stopping for this fold
             early_stopping = EarlyStopping(patience=self.patience, delta=self.delta)

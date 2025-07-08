@@ -43,4 +43,7 @@ TORCH_LAYERS = {
     "dropout": nn.Dropout,
 }
 TORCH_LOSS = {"mse": nn.MSELoss}
-TORCH_OPTIM = {"adam": optim.Adam}
+TORCH_OPTIM = {
+    "adam": optim.Adam,
+    "adamW": optim.AdamW,
+}
