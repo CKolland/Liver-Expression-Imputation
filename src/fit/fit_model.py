@@ -228,6 +228,7 @@ def fit_model(path_to_setup: str, path_to_out: str):
         train_config.optimization.get_optimizer(),
         train_config.optimization.learning_rate,
         train_config.optimization.weight_decay,
+        train_config.optimization.use_scheduler,
         train_config.seed,
         train_config.num_workers,
     )
