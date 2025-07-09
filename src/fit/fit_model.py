@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta
 import logging
-from pathlib import Path
 import sys
 import time
 
@@ -14,11 +13,11 @@ import torch.optim as optim
 
 from utils.model import MLP
 import utils.confy as confy
-import utils.io_utils as io
-from utils.io_utils import ImputationDataset, TrainingMetrics
+import utils.io as io
+from utils.io import ImputationDataset, TrainingMetrics
 from utils.fit import TrainingPipeline
 
-import fit.constants as C
+import fit._constants as C
 
 
 def test_model_fitting():
