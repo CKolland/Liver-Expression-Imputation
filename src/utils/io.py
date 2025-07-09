@@ -12,7 +12,7 @@ import tomli
 from torch import float32, tensor, Tensor
 from torch.utils.data import Dataset
 
-import fit.constants as C
+import utils._constants as C
 
 
 class ImputationDataset(Dataset):

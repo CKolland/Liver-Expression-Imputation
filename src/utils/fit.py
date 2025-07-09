@@ -6,6 +6,7 @@ from typing import Any
 
 import anndata as ad
 import numpy as np
+import pandas as pd
 from sklearn.model_selection import KFold
 import torch
 import torch.nn as nn
@@ -14,7 +15,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader, Dataset, SubsetRandomSampler
 from tqdm import tqdm
 
-from utils.io_utils import ImputationDataset, TrainingMetrics
+from utils.io import ImputationDataset, TrainingMetrics
 
 
 class EarlyStopping:
@@ -245,7 +246,7 @@ class TrainingPipeline:
         pbar = tqdm(
             enumerate(train_loader),
             total=num_batches,
-            desc=f"Fold {fold + 1} - Train Epoch {epoch + 1},",
+            desc=f"Fold {fold + 1} - Train Epoch {epoch + 1}",
         )
         for batch_idx, (x, y) in pbar:
             # Move input (x) and target (y) to the specified device
@@ -520,7 +521,21 @@ class TrainingPipeline:
 
 
 class TestingPipeline:
-    """_summary_"""
+    """Testing pipeline for neural network model evaluation and result storage.
+
+    This class provides functionality to run model testing on a dataset,
+    collect predictions, and organize results into structured formats including
+    AnnData objects for downstream analysis.
+
+    :param test_loader: DataLoader containing the test dataset
+    :type test_loader: DataLoader
+    :param model: Neural network model to be tested
+    :type model: nn.Module
+    :param device: Device to run the model on (CPU or GPU)
+    :type device: torch.device
+    :param logger: Optional logger for tracking testing progress and results
+    :type logger: Logger | None
+    """
 
     def __init__(
         self,
@@ -529,37 +544,117 @@ class TestingPipeline:
         device: torch.device,
         logger: Logger | None = None,
     ):
+        """Initialize the testing pipeline with model and data configuration."""
         self.test_loader: DataLoader = test_loader
+        self.cell_types: list[str] | None = None  # Optional cell type annotations
         self.model: nn.Module = model
         self.device: torch.device = device
         self.logger: Logger | None = logger
 
-    def _load_model(self):
-        """_summary_"""
-        pass
+        # Storage containers for test results
+        self.inputs = []
+        self.targets = []
+        self.predictions = []
 
-    def test(self):
-        """_summary_"""
-        self.model.eval()  # Set model to evaluation mode
+    def test(self) -> dict[str, Any]:
+        """Run the model testing pipeline on the test dataset.
 
-        targets, predictions = [], []
+        Performs inference on the entire test dataset, collecting inputs,
+        targets, and predictions. The model is set to evaluation mode and
+        gradients are disabled for efficient inference.
+
+        :return: Dictionary containing test results with keys 'input', 'target',
+                'prediction', and 'cell_type'
+        :rtype: dict[str, Any]
+        """
+        self.model.eval()  # Set model to evaluation mode (disables dropout, batch norm training)
+
+        # Reset storage containers for fresh test run
+        self.inputs.clear()
+        self.targets.clear()
+        self.predictions.clear()
+
         with torch.no_grad():
-            # Create a progress bar to monitor testing progress
-            pbar = tqdm(self.test_loader, desc=f"Test")
-            for x, y in pbar:
-                x, y = x.to(self.device), y.to(self.device)
+            for batch in tqdm(self.test_loader, desc=f"Test"):
+                # Handle different batch formats - some datasets return tuples, others single tensors
+                if isinstance(batch, (list, tuple)):
+                    x, y = batch[0], batch[1] if len(batch) > 1 else None
+                else:
+                    x, y = batch, None
 
+                # Move tensors to the specified device (CPU/GPU)
+                x = x.to(self.device)
+                if y is not None:
+                    y = y.to(self.device)
+
+                # Forward pass through the model
                 y_hat = self.model(x)
 
-                targets.append(y)
-                predictions.append(y_hat)
+                # Convert tensors to CPU and then to lists for storage
+                batch_inputs = x.cpu().tolist()
+                batch_targets = y.cpu().tolist()
+                batch_predictions = y_hat.cpu().tolist()
 
-        # Concatenate all batches
-        targets = np.vstack(targets)  # Shape: (n_samples, n_genes)
-        predictions = np.vstack(predictions)
+                # Accumulate results across batches
+                self.inputs.extend(batch_inputs)
+                self.targets.extend(batch_targets)
+                self.predictions.extend(batch_predictions)
 
-        # Create AnnData to store results
-        adata = ad.AnnData(X=targets)
-        adata.layers["predictions"] = predictions
+        # Compile results into a structured dictionary
+        results = {
+            "input": self.inputs,
+            "target": self.targets,
+            "prediction": self.predictions,
+            "cell_type": self.cell_types,
+        }
+
+        return results
+
+    def create_anndata(self, results: dict[str, Any]) -> ad.AnnData:
+        """Create an AnnData object from the prediction results.
+
+        Converts the testing results into an AnnData object, which is a standard
+        format for storing annotated data matrices in computational biology.
+        The input data serves as the main data matrix (X), while targets and
+        predictions are stored in the multi-dimensional observations (obsm).
+
+        :param results: Dictionary containing test results with keys 'input',
+                       'target', 'prediction', and 'cell_type'
+        :type results: dict[str, Any]
+
+        :return: AnnData object containing all results with proper annotations
+        :rtype: ad.AnnData
+
+        :raises AttributeError: If logger is None and logging is attempted
+        """
+        if self.logger is not None:
+            self.logger.info("Creating AnnData object from results.")
+
+        # Use inputs as the main data matrix (X)
+        X = results["input"]
+
+        # Create observations (obs) dataframe with cell type annotations
+        obs = pd.DataFrame({"cell_type": results["cell_type"]})
+        obs.index = [f"sample_{i}" for i in range(len(obs))]
+
+        # Create AnnData object
+        adata = ad.AnnData(X=X, obs=obs, dtype=X.dtype)
+
+        # Store outputs and predictions in obsm (multi-dimensional observations)
+        adata.obsm["targets"] = results["target"]
+        adata.obsm["predictions"] = results["prediction"]
+
+        # Add metadata to uns (unstructured annotations)
+        adata.uns["model_info"] = {
+            "model_name": self.model.__class__.__name__,
+            "device": str(self.device),
+            "total_samples": len(results["input"]),
+            "input_shape": results["input"][0].shape,
+            "output_shape": results["target"][0].shape,
+        }
+
+        if self.logger is not None:
+            self.logger.info(f"AnnData object created successfully.")
+            self.logger.debug(adata)
 
         return adata

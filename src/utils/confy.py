@@ -5,7 +5,7 @@ from typing import Optional, Union
 import torch.nn as nn
 import torch.optim as optim
 
-import fit.constants as C
+import utils._constants as C
 
 # --- Dataset configuration classes ---
 
