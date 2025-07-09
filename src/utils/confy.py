@@ -178,11 +178,13 @@ class OptimizationConfig:
     :param str optimizer: Name of the optimizer (must exist in C.TORCH_OPTIM).
     :param float learning_rate: Learning rate for the optimizer.
     :param float weight_decay: L2 regularization strength.
+    :param bool scheduler: Wether the `ReduceLROnPlateau` scheduler should be used. Defaults to `False`.
     """
 
     optimizer: str = "adam"
     learning_rate: float = 1e-3
     weight_decay: float = 1e-4
+    use_scheduler: bool = False
 
     def get_optimizer(self) -> optim.Optimizer:
         """Retrieve the optimizer class based on the selected name.
