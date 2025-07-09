@@ -12,7 +12,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from torch.utils.data import DataLoader, Dataset, SubsetRandomSampler
+from torch.utils.data import DataLoader, Dataset, Subset, SubsetRandomSampler
 from tqdm import tqdm
 
 from utils.io import ImputationDataset, TrainingMetrics
@@ -391,10 +391,13 @@ class TrainingPipeline:
                 num_workers=self.num_workers,
                 pin_memory=True if torch.cuda.is_available() else False,
             )
+
+            # Subset (no shuffling needed)
+            val_dataset = Subset(self.dataset, val_idx)
             val_loader = DataLoader(
-                dataset=self.dataset,
+                dataset=val_dataset,
                 batch_size=self.batch_size,
-                sampler=SubsetRandomSampler(val_idx),
+                shuffle=False,
                 num_workers=self.num_workers,
                 pin_memory=True,
             )
