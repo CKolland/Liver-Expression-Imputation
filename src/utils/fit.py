@@ -10,7 +10,7 @@ from sklearn.model_selection import KFold
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader, Dataset, SubsetRandomSampler
 from tqdm import tqdm
 
@@ -204,7 +204,7 @@ class TrainingPipeline:
         epoch: int,
         train_loader: DataLoader,
         optimizer: optim.Optimizer,
-        scheduler: optim.lr_scheduler._LRScheduler | None = None,
+        # scheduler: optim.lr_scheduler._LRScheduler | None = None,
     ) -> tuple[float, float, float]:
         """Train the model for a single epoch and return training statistics.
 
@@ -243,7 +243,9 @@ class TrainingPipeline:
 
         # Create a progress bar to monitor training
         pbar = tqdm(
-            enumerate(train_loader), desc=f"Fold {fold + 1} - Train Epoch {epoch + 1}"
+            enumerate(train_loader),
+            total=num_batches,
+            desc=f"Fold {fold + 1} - Train Epoch {epoch + 1},",
         )
         for batch_idx, (x, y) in pbar:
             # Move input (x) and target (y) to the specified device
@@ -270,8 +272,9 @@ class TrainingPipeline:
 
             optimizer.step()  # Update model parameters
 
-            if scheduler is not None:
-                scheduler.step(epoch + batch_idx / num_batches)
+            # Comment scheduler out to make sure it does not influence
+            # if scheduler is not None:
+            #     scheduler.step(epoch + batch_idx / num_batches)
 
             # Accumulate metrics
             epoch_loss += loss.item()
@@ -402,10 +405,11 @@ class TrainingPipeline:
             optimizer = self._setup_optimizer(self.model)
 
             # Create learning rate scheduler
-            T_0 = len(train_loader) * 5  # 5 epochs worth of batches
-            T_mult = 2  # Double each restart
-            eta_min = 1e-7
-            scheduler = CosineAnnealingWarmRestarts(optimizer, T_0, T_mult, eta_min)
+            # T_0 = len(train_loader) * 5  # 5 epochs worth of batches
+            # T_mult = 2  # Double each restart
+            # eta_min = 1e-7
+            # scheduler = CosineAnnealingWarmRestarts(optimizer, T_0, T_mult, eta_min)
+            scheduler = ReduceLROnPlateau(optimizer, "min")
 
             # Initialize early stopping for this fold
             early_stopping = EarlyStopping(patience=self.patience, delta=self.delta)
@@ -423,6 +427,9 @@ class TrainingPipeline:
                     epoch,
                     val_loader,
                 )
+
+                # Make step according to validation loss
+                scheduler.step(val_loss)
 
                 # Record metrics
                 metrics.add_fold_epoch(
