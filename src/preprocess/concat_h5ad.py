@@ -3,8 +3,8 @@ from pathlib import Path
 
 import anndata as ad
 
-from preprocess import constants as C
-from utils.io_utils import verify_path
+from preprocess import _constants as C
+from utils.io import assert_path
 
 
 def duplicated_obs_names(adata_objs: list[ad.AnnData]) -> bool:
@@ -30,7 +30,7 @@ def duplicated_obs_names(adata_objs: list[ad.AnnData]) -> bool:
     return duplicated
 
 
-def concat_h5ad(adata_objs: list[str], out_path: Path):
+def concat_h5ad(adata_paths: list[str], out_path: Path):
     """Concatenate multiple AnnData (.h5ad) files into a single AnnData object and write to disk.
     Handles duplicate observation names by making them unique if needed.
 
@@ -45,8 +45,9 @@ def concat_h5ad(adata_objs: list[str], out_path: Path):
     )
 
     # Validate that all object paths are correct
-    for path in adata_objs:
-        verify_path(path)
+    adata_objs = []
+    for path in adata_paths:
+        adata_objs.append(assert_path(path))
 
     # Load all input AnnData objects
     adatas = [ad.read_h5ad(p) for p in adata_objs]

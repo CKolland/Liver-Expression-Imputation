@@ -4,18 +4,18 @@ from pathlib import Path
 from anndata import read_h5ad
 import numpy as np
 
-import preprocess.constants as C
-from utils.io_utils import verify_path
+import preprocess._constants as C
+from utils.io import assert_path
 
 
-def create_testset(adata_path: str, split: float):
+def create_testset(path_to_adata: str, split: float):
     """Splits a given AnnData object into a train/test set and saves them to disk.
 
     This function reads an AnnData object from a `.h5ad` file, randomly selects
     a subset of observations to form a test set based on the specified split ratio,
     and saves both the resulting train and test sets as separate `.h5ad` files.
 
-    :param str adata_path: Path to the input `.h5ad` file containing the full dataset.
+    :param str path_to_adata: Path to the input `.h5ad` file containing the full dataset.
     :param float split: Proportion of observations to include in the test set (e.g., 0.2 for 20%).
 
     :raises FileNotFoundError: If the input file does not exist.
@@ -29,7 +29,7 @@ def create_testset(adata_path: str, split: float):
     )
 
     # Load the AnnData file
-    verify_path(adata_path)
+    adata_path = assert_path(path_to_adata)
     adata = read_h5ad(adata_path)
     logging.info(C.SUBSET_READ_MSG.format(adata=adata))
 

@@ -1,6 +1,6 @@
 import argparse
 
-import preprocess.constants as C
+import preprocess._constants as C
 from preprocess.concat_h5ad import concat_h5ad
 from preprocess.create_testset import create_testset
 from preprocess.scale_data import scale_data

@@ -7,8 +7,8 @@ from anndata import AnnData, read_h5ad
 import numpy as np
 from scipy.sparse import csr_matrix
 
-import preprocess.constants as C
-from utils.io_utils import verify_path
+import preprocess._constants as C
+from utils.io import assert_path
 
 
 def prep_data(adata: AnnData, data_layer: Optional[str]) -> csr_matrix:
@@ -60,13 +60,13 @@ def scale_log1p(adata: AnnData, data_layer: Optional[str]) -> AnnData:
     return adata
 
 
-def scale_data(adata_path: str, scale_mode: str, data_layer: str):
+def scale_data(path_to_adata: str, scale_mode: str, data_layer: str):
     """Loads an AnnData file, applies a specified scaling transformation, and saves the result.
 
     Currently supports only the 'log1p' transformation mode. The transformed data
     is saved to a new file named after the original input.
 
-    :param str adata_path: Path to the input AnnData (.h5ad) file.
+    :param str path_to_adata: Path to the input AnnData (.h5ad) file.
     :param str scale_mode: Scaling mode to apply. Supported values: "log1p".
     :param str data_layer: Name of the data layer within the AnnData object to transform.
 
@@ -81,7 +81,7 @@ def scale_data(adata_path: str, scale_mode: str, data_layer: str):
     )
 
     # Load the AnnData file
-    verify_path(adata_path)
+    adata_path = assert_path(path_to_adata)
     adata = read_h5ad(adata_path)
     logging.info(C.SCALE_READ_MSG)
 
