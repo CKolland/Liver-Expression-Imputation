@@ -463,7 +463,7 @@ class TrainingPipeline:
             )
 
             self.logger.info(
-                f"Fold {fold + 1} completed. Best val loss: {early_stopping.best_val_loss:.6f}"
+                f"Fold {fold + 1} completed. Best val loss: {abs(early_stopping.best_val_loss):.6f}"
             )
 
         # Load the best-performing model weights into a new model instance
