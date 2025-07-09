@@ -1,3 +1,12 @@
+# ---------------------
+#     Logging setup
+# ---------------------
+
+LOGGING_LVL_CONSOLE = "INFO"
+LOGGING_LVL_FILE = "DEBUG"
+LOGGING_FORMAT = "[%(levelname)s] %(asctime)s |> %(message)s"
+LOGGING_DATEFMT = "%Y-%m-%d %H:%M:%S"
+
 # --------------------
 #     Parser setup
 # --------------------
