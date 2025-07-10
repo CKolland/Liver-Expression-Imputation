@@ -152,10 +152,13 @@ def fit_model(path_to_setup: str, path_to_out: str):
     # Verify paths
     setup_file = io.assert_path(path_to_setup, assert_dir=False)  # File
     out_dir = io.assert_path(path_to_out)  # Directory
+    
+    # Load model config here to get model name
+    model_config = confy.setup_model(run_setup["model"])
 
     # Create run directory
     now = datetime.now().strftime("%Y-%m-%d_%H-%M")
-    run_dir = out_dir / f"training_run_{now}"
+    run_dir = out_dir / f"{model_config.name}_run_{now}"
     run_dir.mkdir(parents=True, exist_ok=True)
 
     # ---------------------
@@ -202,7 +205,6 @@ def fit_model(path_to_setup: str, path_to_out: str):
     #     Setup model
     # -------------------
 
-    model_config = confy.setup_model(run_setup["model"])
     mlp = MLP(model_config.to_torch(), device)
     logger.info("Built model successfully.")
     logger.debug(mlp)
