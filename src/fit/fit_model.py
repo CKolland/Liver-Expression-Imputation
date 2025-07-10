@@ -154,6 +154,7 @@ def fit_model(path_to_setup: str, path_to_out: str):
     out_dir = io.assert_path(path_to_out)  # Directory
     
     # Load model config here to get model name
+    run_setup = io.load_toml(setup_file)
     model_config = confy.setup_model(run_setup["model"])
 
     # Create run directory
@@ -175,8 +176,6 @@ def fit_model(path_to_setup: str, path_to_out: str):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logger.info(f"Supported device for this run: {device}.")
     logger.info("----")
-
-    run_setup = io.load_toml(setup_file)
 
     # Load training data
     train_data_config = confy.setup_dataset(run_setup["train_data"])
