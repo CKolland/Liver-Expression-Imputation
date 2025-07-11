@@ -55,13 +55,13 @@ def test_model(
     test_config = confy.setup_dataset(run_setup["test_data"])
     for testset in test_config:
         test_data_config = test_config.config[testset]
-        test_data = ad.read_h5ad(test_data_config.path)
-        logger.info(f"📁 Training data loaded successfully: '{test_data_config.path}'.")
+        test_data = ad.read_h5ad(test_data_config["path"])
+        logger.info(f"📁 Training data loaded successfully: '{test_data_config["path"]}'.")
 
         # Choose data layer if provided
-        if test_data_config.layer is not None:
-            test_data.X = test_data.layers[test_data_config.layer]
-            logger.info(f"Selected {test_data_config.layer} as data layer.")
+        if test_data_config["layer"] is not None:
+            test_data.X = test_data.layers[test_data_config["layer"]]
+            logger.info(f"Selected {test_data_config["layer"]} as data layer.")
 
         logger.debug(test_data)
         testsets.append(test_data)
