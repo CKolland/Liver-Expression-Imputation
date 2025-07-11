@@ -659,8 +659,6 @@ class TestingPipeline:
             "model_name": self.model.__class__.__name__,
             "device": str(self.device),
             "total_samples": len(results["input"]),
-            "input_shape": results["input"][0].shape,
-            "output_shape": results["target"][0].shape,
         }
 
         if self.logger is not None:
