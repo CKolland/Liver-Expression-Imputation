@@ -540,11 +540,12 @@ class TestingPipeline:
         test_loader: DataLoader,
         model: nn.Module,
         device: torch.device,
+        cell_types: list[str] | None = None,
         logger: Logger | None = None,
     ):
         """Initialize the testing pipeline with model and data configuration."""
         self.test_loader: DataLoader = test_loader
-        self.cell_types: list[str] | None = None  # Optional cell type annotations
+        self.cell_types: list[str] | None = cell_types  # Optional cell type annotations
         self.model: nn.Module = model
         self.device: torch.device = device
         self.logger: Logger | None = logger
@@ -599,12 +600,19 @@ class TestingPipeline:
                 self.predictions.extend(batch_predictions)
 
         # Compile results into a structured dictionary
-        results = {
-            "input": self.inputs,
-            "target": self.targets,
-            "prediction": self.predictions,
-            "cell_type": self.cell_types,
-        }
+        if self.cell_types is not None:
+            results = {
+                "input": self.inputs,
+                "target": self.targets,
+                "prediction": self.predictions,
+                "cell_type": self.cell_types,
+            }
+        else:
+            results = {
+                "input": self.inputs,
+                "target": self.targets,
+                "prediction": self.predictions,
+            }
 
         return results
 
@@ -631,12 +639,15 @@ class TestingPipeline:
         # Use inputs as the main data matrix (X)
         X = results["input"]
 
-        # Create observations (obs) dataframe with cell type annotations
-        obs = pd.DataFrame({"cell_type": results["cell_type"]})
-        obs.index = [f"sample_{i}" for i in range(len(obs))]
+        if self.cell_types is not None:
+            # Create observations (obs) dataframe with cell type annotations
+            obs = pd.DataFrame({"cell_type": results["cell_type"]})
+            obs.index = [f"sample_{i}" for i in range(len(obs))]
 
-        # Create AnnData object
-        adata = ad.AnnData(X=X, obs=obs, dtype=X.dtype)
+            # Create AnnData object
+            adata = ad.AnnData(X=X, obs=obs, dtype=X.dtype)
+        else:
+            adata = ad.AnnData(X=X, dtype=X.dtype)
 
         # Store outputs and predictions in obsm (multi-dimensional observations)
         adata.obsm["targets"] = results["target"]

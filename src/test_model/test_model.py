@@ -53,11 +53,11 @@ def test_model(
     # Load test data
     testsets = []
     test_config = confy.setup_dataset(run_setup["test_data"])
-    for testset in test_config:
+    for idx, testset in enumerate(test_config):
         test_data_config = test_config.config[testset]
         test_data = ad.read_h5ad(test_data_config["path"])
         logger.info(
-            f"📁 Training data loaded successfully: '{test_data_config['path']}'."
+            f"📁 Test data {idx} loaded successfully: '{test_data_config['path']}'."
         )
 
         # Choose data layer if provided
@@ -75,9 +75,9 @@ def test_model(
     logger.info(f"📁 Mask for imputation loaded successfully: '{masking_config.path}'.")
 
     test_datasets = []
-    for testset in testsets:
+    for idx, testset in enumerate(testsets):
         test_dataset = ImputationDataset(testset, imputation_mask)
-        logger.info("Created testing dataset.")
+        logger.info(f"Created testing dataset {idx}.")
         logger.debug(test_dataset)
         test_datasets.append(test_dataset)
 
