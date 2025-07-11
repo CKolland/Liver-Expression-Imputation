@@ -1,0 +1,60 @@
+[imputation_mask]
+type = "csv"
+path = "data/imputation_mask.csv"
+header = "none"
+
+[train_data]
+type = "h5ad"
+path = "data/train_data_scRNAseq_train.h5ad"
+layer = "log1p"
+
+[test_data.dataset1]
+type = "h5ad"
+path = "data/train_data_scRNAseq_test.h5ad"
+layer = "log1p"
+
+[test_data.dataset2]
+type = "h5ad"
+path = "data/test_data.h5ad"
+layer = "log1p"
+
+[model]
+name = "liver_imputation_v4_2"
+type = "mlp"
+n_layers = 3
+
+[model.layers.layer1]
+type = "linear"
+in_dim = 931
+out_dim = 7762
+activation = "relu"
+
+[model.layers.layer2]
+type = "linear"
+in_dim = 7762
+out_dim = 15526
+activation = "relu"
+dropout = 0.2
+
+[model.layers.layer3]
+type = "linear"
+in_dim = 15526
+out_dim = 31053
+
+[training]
+seed = 27062025
+kfolds = 6
+batch_size = 128
+epochs = 100
+loss = "mse"
+num_workers = 8
+
+[training.early_stopping]
+patience = 20
+delta = 0
+
+[training.optimization]
+optimizer = "adamW"
+learning_rate = 1e-4
+weight_decay = 1e-4
+use_scheduler = true
