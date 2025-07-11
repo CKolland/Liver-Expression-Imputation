@@ -645,9 +645,9 @@ class TestingPipeline:
             obs.index = [f"sample_{i}" for i in range(len(obs))]
 
             # Create AnnData object
-            adata = ad.AnnData(X=X, obs=obs, dtype=X.dtype)
+            adata = ad.AnnData(X=X, obs=obs)
         else:
-            adata = ad.AnnData(X=X, dtype=X.dtype)
+            adata = ad.AnnData(X=X)
 
         # Store outputs and predictions in obsm (multi-dimensional observations)
         adata.obsm["targets"] = results["target"]
