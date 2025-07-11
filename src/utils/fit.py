@@ -651,8 +651,8 @@ class TestingPipeline:
             adata = ad.AnnData(X=X)
 
         # Store outputs and predictions in obsm (multi-dimensional observations)
-        adata.obsm["targets"] = results["target"]
-        adata.obsm["predictions"] = results["prediction"]
+        adata.obsm["targets"] = csr_matrix(results["target"])
+        adata.obsm["predictions"] = csr_matrix(results["prediction"])
 
         # Add metadata to uns (unstructured annotations)
         adata.uns["model_info"] = {
