@@ -57,7 +57,7 @@ def test_model(
         test_data_config = test_config.config[testset]
         test_data = ad.read_h5ad(test_data_config["path"])
         logger.info(
-            f"📁 Test data {idx} loaded successfully: '{test_data_config['path']}'."
+            f"📁 Test data {idx + 1} loaded successfully: '{test_data_config['path']}'."
         )
 
         # Choose data layer if provided
@@ -77,7 +77,7 @@ def test_model(
     test_datasets = []
     for idx, testset in enumerate(testsets):
         test_dataset = ImputationDataset(testset, imputation_mask)
-        logger.info(f"Created testing dataset {idx}.")
+        logger.info(f"Created testing dataset {idx + 1}.")
         logger.debug(test_dataset)
         test_datasets.append(test_dataset)
 
@@ -118,7 +118,7 @@ def test_model(
             pin_memory=True if torch.cuda.is_available() else False,
         )
 
-        pipeline = TestingPipeline(test_loader, mlp, device, logger)
+        pipeline = TestingPipeline(test_loader, mlp, device, logger=logger)
         results = pipeline.test()
         adata = pipeline.create_anndata(results)
 
