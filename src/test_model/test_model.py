@@ -108,7 +108,7 @@ def test_model(
     # Load training config
     train_config = confy.setup_training(run_setup["training"])
 
-    for test_dataset in test_datasets:
+    for idx, test_dataset in enumerate(test_datasets):
         # Create test data loader
         test_loader = DataLoader(
             dataset=test_dataset,
@@ -123,4 +123,6 @@ def test_model(
         adata = pipeline.create_anndata(results)
 
         # Save AnnData object
-        adata.write(run_dir / f"{model_config.name}_test_results_{now}.h5ad")
+        save_path = run_dir / f"{model_config.name}_test_{idx}_{now}.h5ad"
+        adata.write(save_path)
+        logger.info(f"Wrote AnnData successfully to file: '{save_path}'")
