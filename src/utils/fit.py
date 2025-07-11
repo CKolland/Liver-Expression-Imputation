@@ -394,7 +394,7 @@ class TrainingPipeline:
                 batch_size=self.batch_size,
                 shuffle=False,
                 num_workers=self.num_workers,
-                pin_memory=True,
+                pin_memory=True if torch.cuda.is_available() else False,
             )
 
             # Reset weights of model in fresh fold
