@@ -7,6 +7,7 @@ from typing import Any
 import anndata as ad
 import numpy as np
 import pandas as pd
+from scipy.sparse import csr_matrix
 from sklearn.model_selection import KFold
 import torch
 import torch.nn as nn
@@ -637,7 +638,7 @@ class TestingPipeline:
             self.logger.info("Creating AnnData object from results.")
 
         # Use inputs as the main data matrix (X)
-        X = results["input"]
+        X = csr_matrix(results["input"])
 
         if self.cell_types is not None:
             # Create observations (obs) dataframe with cell type annotations
