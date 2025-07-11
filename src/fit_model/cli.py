@@ -5,8 +5,8 @@ import os
 # Helps prevent CUDA OOM errors in multi-phase training (e.g., K-Fold CV)
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
-import fit._constants as C
-from fit.fit_model import fit_model, test_model_fitting
+import fit_model._constants as C
+from fit_model.fit_model import fit_model, test_model_fitting
 
 
 def main():

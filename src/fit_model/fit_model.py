@@ -17,7 +17,7 @@ import utils.io as io
 from utils.io import ImputationDataset, TrainingMetrics
 from utils.fit import TrainingPipeline
 
-import fit._constants as C
+import fit_model._constants as C
 
 
 def test_model_fitting():
