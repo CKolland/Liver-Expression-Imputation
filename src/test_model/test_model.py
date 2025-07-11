@@ -56,7 +56,7 @@ def test_model(
     for testset in test_config:
         test_data_config = test_config.config[testset]
         test_data = ad.read_h5ad(test_data_config["path"])
-        logger.info(f"📁 Training data loaded successfully: '{test_data_config["path"]}'.")
+        logger.info(f"📁 Training data loaded successfully: '{test_data_config['path']}'.")
 
         # Choose data layer if provided
         if test_data_config["layer"] is not None:
