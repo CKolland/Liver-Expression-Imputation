@@ -38,7 +38,7 @@ def main():
     parser.add_argument(
         C.OUTPUT_LONG,
         C.OUTPUT_SHORT,
-        action="store_true",
+        type=str,
         help=C.OUTPUT_HELP,
     )
 
