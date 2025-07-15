@@ -177,7 +177,7 @@ def main():
     elif args.command == C.SUB_COMMAND_TESTSET:
         create_testset(args.adata, split=args.split)
     elif args.command == C.SUB_COMMAND_SUBSET:
-        subset_adata(args.adata, args.rows, args.cols, args.shuffle)
+        subset_adata(args.adata, args.rows, args.columns, args.shuffle)
 
 
 if __name__ == "__main__":
