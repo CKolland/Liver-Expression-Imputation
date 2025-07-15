@@ -37,7 +37,7 @@ def visualize_test(path_to_adata: str, custom_masks: str | None):
     # Each folder is created with the schematic: dataset name + "_figures"
     out_dir = adata_file.parent / f"{adata_file.stem}_figures"
     out_dir.mkdir(parents=True, exist_ok=True)
-    logging.info(f"All plots are save in '{out_dir}'.")
+    logging.info(f"All plots are saved in '{out_dir}'.")
 
     if custom_masks is not None:
         masks = pd.read_feather(custom_masks)
