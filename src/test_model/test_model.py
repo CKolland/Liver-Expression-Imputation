@@ -123,6 +123,6 @@ def test_model(
         adata = pipeline.create_anndata(results)
 
         # Save AnnData object
-        save_path = run_dir / f"{model_config.name}_test_{idx}_{now}.h5ad"
+        save_path = run_dir / f"{model_config.name}_test_{idx + 1}_{now}.h5ad"
         adata.write(save_path)
         logger.info(f"Wrote AnnData successfully to file: '{save_path}'")
