@@ -26,6 +26,7 @@ dependencies = [
 preprocess = "preprocess.cli:main"
 fit = "fit_model.cli:main"
 evaluate = "test_model.cli:main"
+visualize = "visualize.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
