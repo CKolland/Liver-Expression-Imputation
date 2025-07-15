@@ -4,7 +4,7 @@ SUBPARSERS_PREP_DEST = "command"
 
 # Logging setup
 LOGGING_LEVEL = "INFO"
-LOGGING_FORMAT = "%(asctime)s || %(levelname)s |> %(message)s"
+LOGGING_FORMAT = "[%(levelname)s] %(asctime)s |> %(message)s"
 LOGGING_DATEFMT = "%Y-%m-%d %H:%M:%S"
 
 # ------------------------
