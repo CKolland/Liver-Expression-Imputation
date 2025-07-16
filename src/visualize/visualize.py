@@ -45,7 +45,7 @@ def visualize_test(path_to_adata: str, custom_masks: str | None):
         for mask in masks:
             targets = adata.obsm["targets"][:, masks[mask].to_numpy()]
             predictions = adata.obsm["predictions"][:, masks[mask].to_numpy()]
-            gene_names = masks[mask].index.to_list()
+            gene_names = masks[masks[mask]].index.to_list()
 
             gene_wise_metrics, _ = calc_test_metrics(targets, predictions, gene_names)
             gene_wise_metrics.to_feather(
