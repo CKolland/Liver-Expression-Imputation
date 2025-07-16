@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 import re
 import warnings
 
@@ -7,6 +6,8 @@ import pandas as pd
 from plotnine import *
 from plotnine.exceptions import PlotnineWarning
 import scipy.sparse as sparse
+from scipy.stats import pearsonr, spearmanr
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 import utils._constants as C
 
@@ -14,453 +15,276 @@ import utils._constants as C
 warnings.filterwarnings("ignore", category=PlotnineWarning)
 
 
-@dataclass
-class PlotConfig:
-    """Configuration class for plot styling and behavior.
+def _calc_axis_wise_metrics(
+    targets: sparse.spmatrix,
+    predictions: sparse.spmatrix,
+    item_names: list[str],
+    axis: int = C.GENE_AXIS,
+    label: str = C.GENE_LABEL,
+) -> pd.DataFrame:
+    """Calculate axis-wise metrics for genes (axis=0) or cells (axis=1).
 
-    This dataclass contains all the configuration options for customizing
-    plots created by the PeriodPlotter class. It provides sensible defaults
-    for all parameters while allowing fine-grained control over plot appearance,
-    styling, and behavior.
+    This function computes various evaluation metrics (correlation, error measures,
+    and sparsity statistics) for each gene or cell individually, depending on the
+    specified axis.
 
-    The configuration is organized into logical groups:
-    - Basic plot settings (plot type, smoothing)
-    - Visual styling (colors, sizes, transparency)
-    - Layout and appearance (figure size, background, grid)
-    - Text styling (font sizes, angles)
-    - Labels (titles, axis labels)
-    - Advanced features (faceting, axis limits)
+    :param targets: True expression values as sparse matrix
+    :type targets: sparse.spmatrix
+    :param predictions: Predicted expression values as sparse matrix
+    :type predictions: sparse.spmatrix
+    :param item_names: Names of genes or cells corresponding to the axis
+    :type item_names: list[str]
+    :param axis: Axis along which to compute metrics (0 for genes, 1 for cells)
+    :type axis: int
+    :param label: Label for the DataFrame index column
+    :type label: str
+
+    :return: DataFrame containing per-item metrics
+    :rtype: pd.DataFrame
+
+    :raises ValueError: If axis is not 0 or 1
     """
+    # Convert to appropriate sparse format for efficient column/row-wise operations
+    if axis == C.GENE_AXIS:
+        targets = targets.tocsc()
+        predictions = predictions.tocsc()
 
-    # Basic plot settings
-    plot_type: str = "line"  # Type of plot geometry to use
-    smooth: bool = False  # Whether to add a smoothing layer
-    confidence_interval: bool = False  # Whether to add confidence for smoothing
+        n_items = targets.shape[1]
 
-    # Visual styling
-    point_size: float = 1.5  # Size of points in the plot
-    line_size: float = 0.8  # Thickness of lines in the plot
-    alpha: float = 0.8  # Transparency level for plot elements
+        slice_func = lambda mat, i: mat[:, i]
+    elif axis == C.CELL_AXIS:
+        targets = targets.tocsr()
+        predictions = predictions.tocsr()
 
-    # - A string for a ColorBrewer palette name (e.g., "Paired", "Set1")
-    # - A list of hex color codes (e.g., ["#FF0000", "#00FF00"])
-    # - A dictionary mapping variable names to hex colors
-    colors: str | list[str] | dict[str, str] = "Paired"
+        n_items = targets.shape[0]
 
-    # Layout and appearance
-    figure_size: tuple[int, int] = (12, 8)  # Dimensions in inches (width, height)
-    background_color: str = "white"
-    grid: bool = True  # Whether to display grid lines on the plot.
-    legend_position: str = "right"
+        slice_func = lambda mat, i: mat[i, :]
+    else:
+        raise ValueError("Axis must be 0 (genes) or 1 (cells)")
 
-    # Text styling
-    text_size: int = 11
-    title_size: int = 14
-    axis_text_angle: float = 0  # Rotation for x-axis text labels in degrees
+    pearson_corrs, spearman_corrs = np.zeros(n_items), np.zeros(n_items)
+    mse_vals, mae_vals = np.zeros(n_items), np.zeros(n_items)
 
-    # Labels
-    title: str = "Traning vs. Validation Loss per Fold"
-    x_label: str = "Epochs"
-    y_label: str = "Loss"
-    legend_title: str = "Loss"
+    # Compute mean values across the specified axis
+    target_means = np.array(targets.mean(axis=axis)).ravel()
+    pred_means = np.array(predictions.mean(axis=axis)).ravel()
 
-    # Advanced features
-    facet_by: str | None = None  # Column name to use for faceting (creating subplots)
-    y_limits: tuple[float, float] | None = None
+    # Calculate sparsity (proportion of zero values)
+    target_sparsity = 1 - np.array(
+        [slice_func(targets, i).nnz / targets.shape[axis] for i in range(n_items)]
+    )
+    pred_sparsity = 1 - np.array(
+        [slice_func(targets, i).nnz / targets.shape[axis] for i in range(n_items)]
+    )
+
+    # Compute metrics for each item (gene or cell)
+    for i in range(n_items):
+        target_vec = slice_func(targets, i).toarray().ravel()
+        pred_vec = slice_func(predictions, i).toarray().ravel()
+
+        # Compute error metrics
+        mae_vals[i] = np.mean(np.abs(target_vec - pred_vec))
+        mse_vals[i] = np.mean(np.square(target_vec - pred_vec))
+
+        # Compute correlation metrics with error handling
+        try:
+            pearson_corrs[i], _ = pearsonr(target_vec, pred_vec)
+            spearman_corrs[i], _ = spearmanr(target_vec, pred_vec)
+        except (ValueError, RuntimeWarning):
+            # Handle cases where correlation cannot be computed (e.g., constant values)
+            pearson_corrs[i], spearman_corrs[i] = np.nan, np.nan
+
+    # Compile all metrics into a dictionary
+    metrics = {
+        label: item_names,
+        "pearson_correlation": pearson_corrs,
+        "spearman_correlation": spearman_corrs,
+        "target_mean": target_means,
+        "predicted_mean": pred_means,
+        "mae": mae_vals,
+        "mse": mse_vals,
+        "rmse": np.sqrt(mse_vals),
+        "target_sparsity": target_sparsity,
+        "predicted_sparsity": pred_sparsity,
+        "sparsity_difference": np.abs(target_sparsity - pred_sparsity),
+    }
+
+    return pd.DataFrame(metrics)
 
 
-class PeriodPlotter:
-    """A flexible plotting class for period-based data visualization.
+def calc_test_metrics(
+    targets: sparse.csr_matrix,
+    predictions: sparse.csr_matrix,
+    gene_names: list[str] | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Calculate comprehensive evaluation metrics for gene expression predictions.
 
-    This class creates customizable plots showing how values change over periods,
-    with support for multiple series, faceting, smoothing, and extensive styling options.
-    It uses plotnine (ggplot2 for Python) as the underlying plotting library.
+    This function computes three levels of metrics:
+    1. Global metrics: Overall performance across all genes and cells
+    2. Gene-wise metrics: Performance for each individual gene
+    3. Cell-wise metrics: Performance for each individual cell
 
-    :param data: The input dataset containing the data to plot
-    :type data: pd.DataFrame
-    :param period_col: Column name for the x-axis (time periods, epochs, etc.)
-    :type period_col: str
-    :param value_cols: Column name(s) for the y-axis values
-    :type value_cols: str | list[str]
+    :param targets: True expression values as sparse CSR matrix (cells x genes)
+    :type targets: sparse.csr_matrix
+    :param predictions: Predicted expression values as sparse CSR matrix (cells x genes)
+    :type predictions: sparse.csr_matrix
+    :param gene_names: Optional list of gene names. If None, generates default names
+    :type gene_names: Optional[list[str]]
 
-    :raises ValueError: If data is not a DataFrame, or if specified columns are not found
-
-    ## Example
-
-    .. code-block:: python
-        plotter = PeriodPlotter(data, 'period', ['metric1', 'metric2'])
-        plot = plotter.plot()
+    :return: Tuple containing (global_metrics, gene_wise_metrics, cell_wise_metrics)
+    :rtype: tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]
     """
+    n_cells, n_genes = targets.shape
 
-    def __init__(
-        self,
-        data: pd.DataFrame,
-        period_col: str,
-        value_cols: str | list[str],
-    ):
-        """Initialize the plotter with data and column specifications.
+    # Generate default names if not provided
+    cell_names = [f"cell_{i+1}" for i in range(n_cells)]
+    if gene_names is None:
+        gene_names = [f"gene_{i + 1}" for i in range(n_genes)]
 
-        :param data: The input dataset containing the data to plot
-        :type data: pd.DataFrame
-        :param period_col: Column name for the x-axis (time periods, epochs, etc.)
-        :type period_col: str
-        :param value_cols: Column name(s) for the y-axis values
-        :type value_cols: str | list[str]
+    # Calculate global metrics on the entire dataset
+    # Flatten sparse matrices to 1D arrays for global comparison
+    targets_flat = targets.flatten()
+    preds_flat = predictions.flatten()
 
-        :raises ValueError: If data is not a DataFrame, or if specified columns are not found
-        """
-        self.data = data
-        self.period_col = period_col
-        self.value_cols = self._transform_value_cols(value_cols)
-        self.is_multi: bool = len(self.value_cols) > 1
+    # Compute global correlation metrics
+    pearson_corr, _ = pearsonr(targets_flat, preds_flat)
+    spearman_corr, _ = spearmanr(targets_flat, preds_flat)
 
-        # Initialize plot data and plot (will be set during plotting)
-        self.to_plot = None
-        self.plot = None
+    # Compute global error metrics
+    mae = mean_absolute_error(targets_flat, preds_flat)
+    mse = mean_squared_error(targets_flat, preds_flat)
+    rmse = np.sqrt(mse)
 
-        # Validate inputs during initialization
-        self._validate_inputs()
+    # Compute global sparsity metrics
+    target_sparsity = np.sum(targets_flat == 0) / len(targets_flat)
+    pred_sparsity = np.sum(preds_flat == 0) / len(preds_flat)
+    sparsity_diff = np.abs(target_sparsity - pred_sparsity)
 
-    @staticmethod
-    def _transform_value_cols(value_cols: str | list[str]) -> list[str]:
-        """Convert value_columns to a list format for uniform processing.
-
-        :param value_cols: Column name(s) for the y-axis values
-        :type value_cols: str | list[str]
-
-        :return: List of value column names
-        :rtype: list[str]
-        """
-        if isinstance(value_cols, str):
-            return [value_cols]
-        return value_cols
-
-    def _validate_inputs(self):
-        """Validate inputs and raise appropriate errors.
-
-        Checks that:
-        - Data is a pandas DataFrame
-        - Period column exists in the data
-        - All value columns exist in the data
-
-        :raises ValueError: If validation fails
-        """
-        if not isinstance(self.data, pd.DataFrame):
-            raise ValueError(C.DATA_NOT_DF_ERR)
-
-        # Validate that period column exists
-        if self.period_col not in self.data.columns:
-            raise ValueError(C.PERIOD_COL_NOT_FOUND_ERR.format(col=self.period_col))
-
-        # Validate that all value columns exist
-        missing_cols = [col for col in self.value_cols if col not in self.data.columns]
-        if missing_cols:
-            raise ValueError(C.VALUE_COLS_NOT_FOUND_ERR.format(missing=missing_cols))
-
-    def _prep_plot_data(self, facet_by: str | None):
-        """Prepare data for plotting, reshaping if necessary for multiple series.
-
-        For multiple series, converts data from wide to long format to create a single
-        value column with a 'variable' column indicating the series.
-
-        :param facet_by: Column name to use for faceting, or None
-        :type facet_by: str | None
-
-        :raises ValueError: If facet_by column is not found in the data
-        """
-        # Convert data from wide to long format for multiple series
-        if self.is_multi:
-            # Columns to keep when reshaping
-            id_vars = [self.period_col]
-            if facet_by is not None:
-                if facet_by in self.data.columns:
-                    id_vars.append(facet_by)
-                else:
-                    raise ValueError(C.FACET_COL_NOT_FOUND_ERR.format(col=facet_by))
-
-            self.to_plot = self.data.melt(
-                id_vars=id_vars,
-                value_vars=self.value_cols,
-                var_name="variable",
-                value_name="value",
-            )
-        else:
-            self.to_plot = self.data.copy()
-
-    def _create_base_plot(self, config: PlotConfig):
-        """Create the base ggplot object with appropriate aesthetics.
-
-        :param config: Configuration object containing plot settings
-        :type config: PlotConfig
-        """
-        if self.is_multi:
-            # Multiple series: map color to variable for differentiation
-            base_plot = ggplot(
-                self.to_plot,
-                aes(x=self.period_col, y="value", color="variable"),
-            )
-        else:
-            # Single series: no color mapping in base aesthetics
-            base_plot = ggplot(
-                self.to_plot,
-                aes(x=self.period_col, y=self.value_cols[0]),
-            )
-
-        # Add labels
-        base_plot = base_plot + labs(
-            title=config.title,
-            x=config.x_label,
-            y=config.y_label,
-        )
-
-        self.plot = base_plot
-
-    def _add_geoms(self, config: PlotConfig):
-        """Add geometric layers (lines and/or points) to the plot.
-
-        :param config: Configuration object containing plot settings
-        :type config: PlotConfig
-
-        :raises ValueError: If plot_type is not in ALLOWED_GEOMS
-        """
-        # Validate plot_type
-        if config.plot_type not in C.ALLOWED_GEOMS:
-            raise ValueError(C.UNKNOWN_GEOM_ERR)
-
-        # Add line geometry if requested
-        if config.plot_type in ["line", "both"]:
-            self.plot = self.plot + geom_line(size=config.line_size, alpha=config.alpha)
-
-        # Add point geometry if requested
-        if config.plot_type in ["point", "both"]:
-            self.plot = self.plot + geom_point(
-                size=config.point_size,
-                alpha=config.alpha,
-            )
-
-    @staticmethod
-    def _validate_colors(colors: str | list[str]) -> bool:
-        """Validate that all given colors are in valid hexadecimal format.
-
-        :param colors: A single color string or a list of color strings.
-        :type colors: str | list[str]
-
-        :return: True if all colors are valid hex codes, False otherwise.
-        :rtype: bool
-        """
-        # Regular expression pattern for hex color validation:
-        # 1. ^: Start of string
-        # 2. #: Hash symbol
-        # 3. [A-Fa-f0-9]{n}: Hexadecimal characters of length n
-        # 4. $: End of string
-        hex_pattern = r"^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$"
-
-        if isinstance(colors, str):
-            colors = [colors]  # Convert to list for uniform processing
-
-        return all(re.match(hex_pattern, color) for color in colors)
-
-    def _apply_colors(self, config: PlotConfig):
-        """Apply color specifications to the plot.
-
-        Handles both custom hex colors and color brewer palettes.
-
-        :param config: Configuration object containing color settings
-        :type config: PlotConfig
-        """
-
-        if self._validate_colors(config.colors):
-            # Handle custom hex colors
-            if isinstance(config.colors, dict):
-                color_map = config.colors
-            elif isinstance(config.colors, list):
-                # Map colors to value columns
-                color_map = dict(
-                    zip(self.value_cols, config.colors[: len(self.value_cols)]),
-                )
-            else:
-                color_map = [config.colors]
-
-            self.plot = self.plot + scale_color_manual(
-                values=color_map, name=config.legend_title
-            )
-        else:
-            # Use color brewer palette
-            self.plot = self.plot + scale_color_brewer(
-                type="qual",
-                palette=config.colors,
-                name=config.legend_title,
-            )
-
-    def _add_smoothing(self, config: PlotConfig):
-        """Add smoothing layer to the plot.
-
-        :param config: Configuration object containing smoothing settings
-        :type config: PlotConfig
-        """
-        if config.smooth:
-            smooth_args = {
-                "se": config.confidence_interval,
-                "alpha": config.alpha * 0.3,
-            }
-            self.plot = self.plot + geom_smooth(**smooth_args)
-
-    def _apply_theme_and_layout(self, config: PlotConfig):
-        """Apply theme and layout settings to the plot.
-
-        :param config: Configuration object containing theme settings
-        :type config: PlotConfig
-        """
-
-        # Build theme elements dictionary
-        theme_elements = {
-            "figure_size": config.figure_size,
-            "plot_title": element_text(size=config.title_size, weight="bold"),
-            "axis_text": element_text(size=config.text_size),
-            "axis_title": element_text(size=config.text_size + 1),
-            "legend_title": element_text(size=config.text_size),
-            "legend_text": element_text(size=config.text_size - 1),
-            "panel_background": element_rect(fill=config.background_color),
-            "plot_background": element_rect(fill=config.background_color),
-            "legend_position": config.legend_position,
+    # Create global metrics DataFrame
+    global_metrics = pd.DataFrame(
+        {
+            "pearson_correlation": [pearson_corr],
+            "spearman_correlation": [spearman_corr],
+            "mae": [mae],
+            "mse": [mse],
+            "rmse": [rmse],
+            "target_sparsity": [target_sparsity],
+            "predicted_sparsity": [pred_sparsity],
+            "sparsity_difference": [sparsity_diff],
         }
+    )
 
-        # Apply conditional theme elements
-        if not config.grid:
-            theme_elements["panel_grid"] = element_blank()
+    # Calculate gene-wise metrics (performance for each gene across all cells)
+    gene_wise_metrics = _calc_axis_wise_metrics(
+        targets,
+        predictions,
+        gene_names,
+        axis=C.GENE_AXIS,
+        label=C.GENE_LABEL,
+    )
 
-        if config.axis_text_angle != 0:
-            theme_elements["axis_text_x"] = element_text(
-                angle=config.axis_text_angle, hjust=1
+    # Calculate cell-wise metrics (performance for each cell across all genes)
+    cell_wise_metrics = _calc_axis_wise_metrics(
+        targets,
+        predictions,
+        cell_names,
+        axis=C.CELL_AXIS,
+        label=C.CELL_LABEL,
+    )
+
+    return global_metrics, gene_wise_metrics, cell_wise_metrics
+
+
+def _validate_colors(colors: dict[str, str] | None) -> bool:
+    """Validate that all given colors are in valid hexadecimal format.
+
+    This function checks if all color values in the provided dictionary are valid
+    hexadecimal color codes. It supports 3, 6, and 8 character hex codes (with hash symbol).
+
+    :param colors: Dictionary mapping color names to hex color strings, or None
+    :type colors: dict[str, str] | None
+
+    :return: True if all colors are valid hex codes or colors is None, False otherwise
+    :rtype: bool
+    """
+    if colors is None:
+        return False
+
+    # Regular expression pattern for hex color validation:
+    # 1. ^: Start of string
+    # 2. #: Hash symbol
+    # 3. [A-Fa-f0-9]{n}: Hexadecimal characters of length n (3, 6, or 8)
+    # 4. $: End of string
+    return all(re.match(C.HEX_COLOR_PATTERN, color) for color in colors.values())
+
+
+def plot_value_over_period(
+    data: pd.DataFrame,
+    period_col: str,
+    value_col: str = "value",
+    title: str = "",
+    x_lab: str = "Period",
+    y_lab: str = "Value",
+    color_by: str | None = None,
+    custom_colors: dict[str, str] | None = None,
+    legend_title: str = "",
+    facet_by: str | None = None,
+    save_to: str = "value_over_period.png",
+) -> ggplot:
+    """Create a line plot showing values over time periods with optional grouping and faceting.
+
+    This function generates a line plot using plotnine (ggplot2 for Python) to visualize
+    how values change over different time periods. It supports color grouping, custom colors,
+    and faceting for more complex visualizations.
+
+    :param data: DataFrame containing the data to plot
+    :type data: pd.DataFrame
+    :param period_col: Name of the column containing period/time information for x-axis
+    :type period_col: str
+    :param value_col: Name of the column containing values for y-axis
+    :type value_col: str
+    :param title: Title for the plot
+    :type title: str
+    :param x_lab: Label for the x-axis
+    :type x_lab: str
+    :param y_lab: Label for the y-axis
+    :type y_lab: str
+    :param color_by: Column name(s) to use for color grouping lines
+    :type color_by: str | None
+    :param custom_colors: Dictionary mapping group names to hex color codes
+    :type custom_colors: dict[str, str] | None
+    :param legend_title: Title for the color legend
+    :type legend_title: str
+    :param facet_by: Column name to use for creating separate plot panels
+    :type facet_by: str | None
+
+    :return: A ggplot object representing the configured plot
+    :rtype: ggplot
+    """
+    plot = (
+        ggplot(data, aes(x=period_col, y=value_col, color=color_by))
+        + geom_point()
+        + labs(title=title, x=x_lab, y=y_lab)
+    )
+
+    # Configure color scaling if color grouping is specified
+    if color_by is not None:
+        if _validate_colors(custom_colors):
+            # Use custom colors if they are valid hex codes
+            plot = plot + scale_color_manual(
+                values=custom_colors,
+                name=legend_title,
+            )
+        else:
+            # Fall back to default color palette
+            plot = plot + scale_color_brewer(
+                type=C.DEFAULT_COLOR_TYPE,
+                palette=C.DEFAULT_COLOR_PALETTE,
+                name=legend_title,
             )
 
-        self.plot = self.plot + theme_minimal()
-        self.plot = self.plot + theme(**theme_elements)
-
-    def _apply_faceting(self, config: PlotConfig):
-        """Add faceting if requested.
-
-        :param config: Configuration object containing faceting settings
-        :type config: PlotConfig
-        """
-        if config.facet_by and config.facet_by in self.data.columns:
-            self.plot = self.plot + facet_wrap(f"~{config.facet_by}")
-
-    def _apply_axis_limits(self, config: PlotConfig):
-        """Set axis limits if provided.
-
-        :param config: Configuration object containing axis limit settings
-        :type config: PlotConfig
-        """
-        if config.y_limits:
-            self.plot = self.plot + scale_y_continuous(limits=config.y_limits)
-
-    def render_plot(self, config: PlotConfig | None = None, **kwargs) -> ggplot:
-        """Create the plot with the specified configuration.
-
-        This is the main plotting method that orchestrates all plot creation steps.
-        It prepares the data, creates the base plot, adds geometric layers, applies
-        styling, and returns the final plot object.
-
-        :param config: Configuration object with plot settings. If None, uses default config
-        :type config: PlotConfig | None
-        :param kwargs: Individual configuration parameters that override config settings
-        :type kwargs: Any
-
-        :return: The constructed plotnine plot object
-        :rtype: ggplot
-
-        :raises ValueError: If unknown configuration parameter is provided in kwargs
-
-        ## Example
-
-        .. code-block:: python
-            plotter = PeriodPlotter(data, 'period', 'value')
-            plot = plotter.plot(title='My Plot', plot_type='line')
-        """
-        # Create config with defaults if not provided
-        if config is None:
-            config = PlotConfig()
-
-        # Apply any keyword argument overrides
-        for key, value in kwargs.items():
-            if hasattr(config, key):
-                setattr(config, key, value)
-            else:
-                raise ValueError(C.UNKNOWN_CONFIG_ARG_ERR.foramt(key=key))
-
-        # Prepare data for plotting
-        self._prep_plot_data(config.facet_by)
-
-        # Build plot step by step
-        self._create_base_plot(config)
-        self._add_geoms(config)
-        self._apply_colors(config)
-        self._add_smoothing(config)
-        self._apply_theme_and_layout(config)
-        self._apply_faceting(config)
-        self._apply_axis_limits(config)
-
-        return self.plot
-
-
-class Plotter:
-    """
-    Create a class plotter that gets a PlotConfig and has methods that just get the data to plot.
-    Can be combined with class on top.
-    """
-
-    pass
-
-
-def _calc_sparse_mean_expression(matrix):
-    """_summary_"""
-    # Convert to CSC format for efficient column operations
-    if not sparse.isspmatrix_csc(matrix):
-        matrix = matrix.tocsc()
-
-    # Calculate mean for each column
-    mean_expr = np.array(matrix.mean(axis=0)).flatten()
-
-    return mean_expr
-
-
-def plot_target_vs_prediction(
-    targets,
-    predictions,
-    save_file,
-    labels: tuple[str, str] = ("Targets", "Predictions"),
-):
-    """_summary_"""
-
-    mean_targets = _calc_sparse_mean_expression(targets)
-    mean_predictions = _calc_sparse_mean_expression(predictions)
-
-    # Create DataFrame
-    df = pd.DataFrame({"targets": mean_targets, "predictions": mean_predictions})
-
-    # Start building the plot
-    p = ggplot(df, aes(x="targets", y="predictions")) + geom_point()
-
-    # Add diagonal
-    min_val = min(mean_targets.min(), mean_predictions.min())
-    max_val = max(mean_targets.max(), mean_predictions.max())
-    diagonal_df = pd.DataFrame({"x": [min_val, max_val], "y": [min_val, max_val]})
-    p = p + geom_line(
-        data=diagonal_df,
-        mapping=aes(x="x", y="y"),
-        color="blue",
-        linetype="dashed",
-        alpha=0.7,
-        size=0.8,
-    )
-
-    # Add labels and title
-    p = p + labs(
-        x=labels[0], y=labels[1], title="Mean Expression for Targets vs. Predictions"
-    )
-    p = (
-        p
+    plot = (
+        plot
         + theme_minimal()
         + theme(
             panel_background=element_rect(fill="white"),
@@ -468,4 +292,139 @@ def plot_target_vs_prediction(
         )
     )
 
-    ggsave(p, save_file, dpi=300)
+    if facet_by is not None and facet_by in data.columns:
+        plot = plot + facet_wrap(f"~{facet_by}")
+
+    ggsave(plot, save_to, dpi=C.PLOT_DPI)
+
+    return plot
+
+
+def plot_targets_vs_predictions(
+    data: pd.DataFrame,
+    title: str = "",
+    x_lab: str = "Targets",
+    y_lab: str = "Predictions",
+    save_to: str = "targets_vs_predictions.png",
+) -> ggplot:
+    """Create a scatter plot of targets vs predictions with a diagonal reference line.
+
+    This function generates a scatter plot comparing target values against predicted values,
+    with a diagonal reference line indicating perfect predictions. The plot is saved to a file
+    with customizable styling and labels.
+
+    :param data: DataFrame containing "targets" and "predictions" columns
+    :type data: pd.DataFrame
+    :param title: Title for the plot
+    :type title: str
+    :param x_lab: Label for the x-axis
+    :type x_lab: str
+    :param y_lab: Label for the y-axis
+    :type y_lab: str
+    :param save_to: Filename/path where the plot will be saved
+    :type save_to: str
+
+    :return: A ggplot object representing the configured plot
+    :rtype: ggplot
+
+    :raises KeyError: If "targets" or "predictions" columns are missing from data
+    :raises ValueError: If data is empty or contains invalid values
+    """
+    missing_columns = [col for col in C.REQUIRED_COLUMNS if col not in data.columns]
+    if missing_columns:
+        raise KeyError(f"Missing required columns: '{missing_columns}'.")
+
+    if data.empty:
+        raise ValueError("Input data cannot be empty.")
+
+    plot = (
+        ggplot(data, aes(x="targets", y="predictions"))
+        + geom_point(fill=C.POINT_COLOR)
+        + labs(title=title, x=x_lab, y=y_lab)
+    )
+
+    # Calculate bounds for diagonal reference line (perfect prediction line)
+    min_val = min(data["targets"].min(), data["predictions"].min())
+    max_val = max(data["targets"].max(), data["predictions"].max())
+    diagonal = pd.DataFrame({"x": [min_val, max_val], "y": [min_val, max_val]})
+
+    # Add diagonal reference line to the plot
+    plot = plot + geom_line(
+        data=diagonal,
+        mapping=aes(x="x", y="y"),
+        color=C.DIAGONAL_COLOR,
+        linetype="dashed",
+        alpha=C.DIAGONAL_ALPHA,
+    )
+
+    plot = (
+        plot
+        + theme_minimal()
+        + theme(
+            panel_background=element_rect(fill="white"),
+            plot_background=element_rect(fill="white"),
+        )
+    )
+
+    ggsave(plot, save_to, dpi=C.PLOT_DPI)
+
+    return plot
+
+
+def plot_frequency(
+    data: pd.DataFrame,
+    data_col: str,
+    title: str = "",
+    x_lab: str = "Value",
+    y_lab: str = "Count",
+    save_to: str = "value_frequency.png",
+) -> ggplot:
+    """Create a histogram plot showing the frequency distribution of a specified column.
+
+    This function generates a histogram visualization using plotnine (ggplot2 for Python)
+    with customizable styling and automatically saves the plot to a file. The plot uses
+    a minimal theme with white background and configurable colors from constants.
+
+    :param data: DataFrame containing the data to be plotted
+    :type data: pd.DataFrame
+    :param data_col: Name of the column in the DataFrame to create histogram for
+    :type data_col: str
+    :param title: Title to display at the top of the plot
+    :type title: str, optional
+    :param x_lab: Label for the x-axis of the plot
+    :type x_lab: str, optional
+    :param y_lab: Label for the y-axis of the plot
+    :type y_lab: str, optional
+    :param save_to: File path where the plot should be saved (including extension)
+    :type save_to: str, optional
+
+    :return: The generated ggplot object for further customization if needed
+    :rtype: ggplot
+
+    :raises KeyError: If data_col is not found in the DataFrame columns
+    :raises ValueError: If the DataFrame is empty or data_col contains no valid data
+    """
+    if data_col not in data.columns:
+        raise KeyError(f"Missing required column: '{data_col}'.")
+
+    if data.empty:
+        raise ValueError("Input data cannot be empty.")
+
+    plot = (
+        ggplot(data, aes(x=data_col))
+        + geom_histogram(fill=C.HIST_FILL_COLOR, color=C.HIST_BORDER_COLOR)
+        + labs(title=title, x=x_lab, y=y_lab)
+    )
+
+    plot = (
+        plot
+        + theme_minimal()
+        + theme(
+            panel_background=element_rect(fill="white"),
+            plot_background=element_rect(fill="white"),
+        )
+    )
+
+    ggsave(plot, save_to, dpi=C.PLOT_DPI)
+
+    return plot

@@ -34,10 +34,29 @@ TORCH_OPTIM = {
 #     `utils.vis`
 # -------------------
 
-DATA_NOT_DF_ERR = "Data must be pandas DataFrame."
-PERIOD_COL_NOT_FOUND_ERR = "Period column '{col}' not found in DataFrame."
-VALUE_COLS_NOT_FOUND_ERR = "Not all value columns found in DataFrame: {missing}"
-FACET_COL_NOT_FOUND_ERR = "Facet column '{col}' not foind in DataFrame."
-ALLOWED_GEOMS = ["line", "point", "both"]
-UNKNOWN_GEOM_ERR = f"Plot type must be one of: {ALLOWED_GEOMS}"
-UNKNOWN_CONFIG_ARG_ERR = "Unknown configuration argument: '{key}'"
+PLOT_DPI = 300
+
+# _calc_axis_wise_metrics
+GENE_AXIS = 0
+CELL_AXIS = 1
+
+# calc_test_metrics
+GENE_LABEL = "gene"
+CELL_LABEL = "cell"
+
+# _validate_colors
+HEX_COLOR_PATTERN = r"^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$"
+
+# plot_value_over_period
+DEFAULT_COLOR_PALETTE = "Paired"
+DEFAULT_COLOR_TYPE = "qual"
+
+# plot_targets_vs_predictions
+REQUIRED_COLUMNS = ["targets", "predictions"]
+POINT_COLOR = "#1D2951"
+DIAGONAL_COLOR = "#FFD166"
+DIAGONAL_ALPHA = 0.7
+
+# plot_frequency
+HIST_FILL_COLOR = "#1D2951"
+HIST_BORDER_COLOR = "#FFD166"

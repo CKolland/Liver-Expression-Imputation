@@ -4,7 +4,7 @@ import anndata as ad
 import pandas as pd
 
 from utils.io import assert_path
-from utils.vis import plot_target_vs_prediction
+from utils.vis import calc_test_metrics, plot_frequency, plot_targets_vs_predictions
 import visualize._constants as C
 
 
@@ -45,22 +45,302 @@ def visualize_test(path_to_adata: str, custom_masks: str | None):
         for mask in masks:
             targets = adata.obsm["targets"][:, masks[mask].to_numpy()]
             predictions = adata.obsm["predictions"][:, masks[mask].to_numpy()]
+            gene_names = masks[mask].index.to_list()
 
-            labels = ("Mean Expression Targets", "Mean Expression Predictions")
-            save_file = out_dir / f"{mask}_target_vs_pred.png"
+            metrics = calc_test_metrics(targets, predictions, gene_names)
+            metrics.to_feather(out_dir / f"{mask}_{adata_file.stem}_metrics.feather")
+            logging.info(f"Saved metrics for mask '{mask}'.")
 
-            plot_target_vs_prediction(
-                targets,
-                predictions,
-                labels=labels,
-                save_file=save_file,
+            # Histogram Pearson correlation
+            file_name = out_dir / f"{mask}_pearson_frequency.png"
+
+            p = plot_frequency(
+                metrics,
+                "pearson_correlation",
+                title="Frequency Pearson Correlation",
+                x_lab="Pearson Correlation",
+                save_to=file_name,
             )
-            logging.info(f"💾 Saved plot '{mask}_target_vs_pred.png'.")
+
+            # Histogram Spearman correlation
+            file_name = out_dir / f"{mask}_spearman_frequency.png"
+
+            p = plot_frequency(
+                metrics,
+                "spearman_correlation",
+                title="Frequency Spearman Correlation",
+                x_lab="Spearman Correlation",
+                save_to=file_name,
+            )
+
+            # Mean expression target vs. mean expression predicted
+            plot_data = metrics.rename(
+                columns={
+                    "target_mean": "targets",
+                    "predicted_mean": "predictions",
+                }
+            )[["targets", "predictions"]]
+
+            file_name = out_dir / f"{mask}_target_expr_vs_pred_expr.png"
+
+            p = plot_targets_vs_predictions(
+                plot_data,
+                title="Target vs. Predicted Expression",
+                x_lab="Mean Expression Targets",
+                y_lab="Mean Expression Predictions",
+                save_to=file_name,
+            )
+
+            # Histogram MAE
+            file_name = out_dir / f"{mask}_mae_frequency.png"
+
+            p = plot_frequency(
+                metrics,
+                "mae",
+                title="Frequency MAE",
+                x_lab="MAE",
+                save_to=file_name,
+            )
+
+            # MAE vs. mean expression target
+            plot_data = metrics.rename(
+                columns={
+                    "mae": "targets",
+                    "target_mean": "predictions",
+                }
+            )[["targets", "predictions"]]
+
+            file_name = out_dir / f"{mask}_mae_vs_target_expr.png"
+
+            p = plot_targets_vs_predictions(
+                plot_data,
+                title="MAE vs. Target Expression",
+                x_lab="MAE",
+                y_lab="Mean Expression Targets",
+                save_to=file_name,
+            )
+
+            # Target sparsity vs. predicted sparsity
+            plot_data = metrics.rename(
+                columns={
+                    "target_sparsity": "targets",
+                    "predicted_sparsity": "predictions",
+                }
+            )[["targets", "predictions"]]
+
+            file_name = out_dir / f"{mask}_target_vs_pred_sparsity.png"
+
+            p = plot_targets_vs_predictions(
+                plot_data,
+                title="Target vs. Predicted Sparsity",
+                x_lab="Target Sparsity",
+                y_lab="Predicted Sparsity",
+                save_to=file_name,
+            )
+
+            # Pearson correlation vs. target sparsity
+            plot_data = metrics.rename(
+                columns={
+                    "pearson_correlation": "targets",
+                    "target_sparsity": "predictions",
+                }
+            )[["targets", "predictions"]]
+
+            file_name = out_dir / f"{mask}_pearson_vs_target_sparsity.png"
+
+            p = plot_targets_vs_predictions(
+                plot_data,
+                title="Pearson Correlation vs. Target Sparsity",
+                x_lab="Pearson Correlation",
+                y_lab="Target Sparsity",
+                save_to=file_name,
+            )
+
+            # Spearman correlation vs. target sparsity
+            plot_data = metrics.rename(
+                columns={
+                    "spearman_correlation": "targets",
+                    "target_sparsity": "predictions",
+                }
+            )[["targets", "predictions"]]
+
+            file_name = out_dir / f"{mask}_spearman_vs_target_sparsity.png"
+
+            p = plot_targets_vs_predictions(
+                plot_data,
+                title="Spearman Correlation vs. Target Sparsity",
+                x_lab="Spearman Correlation",
+                y_lab="Target Sparsity",
+                save_to=file_name,
+            )
+
+            # RMSE vs. mean epxression target
+            plot_data = metrics.rename(
+                columns={
+                    "rmse": "targets",
+                    "target_mean": "predictions",
+                }
+            )[["targets", "predictions"]]
+
+            file_name = out_dir / f"{mask}_rmse_vs_target_expr.png"
+
+            p = plot_targets_vs_predictions(
+                plot_data,
+                title="RMSE vs. Mean Expression Target",
+                x_lab="RMSE",
+                y_lab="Mean Expressoin Target",
+                save_to=file_name,
+            )
+
+            logging.info(f"💾 Saved plots for mask '{mask}'.")
     else:
         targets = adata.obsm["targets"]
         predictions = adata.obsm["predictions"]
+        gene_names = adata.var_names.to_list()
 
-        save_file = out_dir / f"target_vs_pred.png"
+        metrics = calc_test_metrics(targets, predictions, gene_names)
+        metrics.to_feather(out_dir / f"{adata_file.stem}_metrics.feather")
+        logging.info(f"Saved metrics.")
 
-        plot_target_vs_prediction(targets, predictions, save_file=save_file)
-        logging.info(f"💾 Save plotd 'target_vs_pred.png'.")
+        # Histogram Pearson correlation
+        file_name = out_dir / "pearson_frequency.png"
+
+        p = plot_frequency(
+            metrics,
+            "pearson_correlation",
+            title="Frequency Pearson Correlation",
+            x_lab="Pearson Correlation",
+            save_to=file_name,
+        )
+
+        # Histogram Spearman correlation
+        file_name = out_dir / "spearman_frequency.png"
+
+        p = plot_frequency(
+            metrics,
+            "spearman_correlation",
+            title="Frequency Spearman Correlation",
+            x_lab="Spearman Correlation",
+            save_to=file_name,
+        )
+
+        # Mean expression target vs. mean expression predicted
+        plot_data = metrics.rename(
+            columns={
+                "target_mean": "targets",
+                "predicted_mean": "predictions",
+            }
+        )[["targets", "predictions"]]
+
+        file_name = out_dir / "target_expr_vs_pred_expr.png"
+
+        p = plot_targets_vs_predictions(
+            plot_data,
+            title="Target vs. Predicted Expression",
+            x_lab="Mean Expression Targets",
+            y_lab="Mean Expression Predictions",
+            save_to=file_name,
+        )
+
+        # Histogram MAE
+        file_name = out_dir / "mae_frequency.png"
+
+        p = plot_frequency(
+            metrics,
+            "mae",
+            title="Frequency MAE",
+            x_lab="MAE",
+            save_to=file_name,
+        )
+
+        # MAE vs. mean expression target
+        plot_data = metrics.rename(
+            columns={
+                "mae": "targets",
+                "target_mean": "predictions",
+            }
+        )[["targets", "predictions"]]
+
+        file_name = out_dir / "mae_vs_target_expr.png"
+
+        p = plot_targets_vs_predictions(
+            plot_data,
+            title="MAE vs. Target Expression",
+            x_lab="MAE",
+            y_lab="Mean Expression Targets",
+            save_to=file_name,
+        )
+
+        # Target sparsity vs. predicted sparsity
+        plot_data = metrics.rename(
+            columns={
+                "target_sparsity": "targets",
+                "predicted_sparsity": "predictions",
+            }
+        )[["targets", "predictions"]]
+
+        file_name = out_dir / "target_vs_pred_sparsity.png"
+
+        p = plot_targets_vs_predictions(
+            plot_data,
+            title="Target vs. Predicted Sparsity",
+            x_lab="Target Sparsity",
+            y_lab="Predicted Sparsity",
+            save_to=file_name,
+        )
+
+        # Pearson correlation vs. target sparsity
+        plot_data = metrics.rename(
+            columns={
+                "pearson_correlation": "targets",
+                "target_sparsity": "predictions",
+            }
+        )[["targets", "predictions"]]
+
+        file_name = out_dir / "pearson_vs_target_sparsity.png"
+
+        p = plot_targets_vs_predictions(
+            plot_data,
+            title="Pearson Correlation vs. Target Sparsity",
+            x_lab="Pearson Correlation",
+            y_lab="Target Sparsity",
+            save_to=file_name,
+        )
+
+        # Spearman correlation vs. target sparsity
+        plot_data = metrics.rename(
+            columns={
+                "spearman_correlation": "targets",
+                "target_sparsity": "predictions",
+            }
+        )[["targets", "predictions"]]
+
+        file_name = out_dir / "spearman_vs_target_sparsity.png"
+
+        p = plot_targets_vs_predictions(
+            plot_data,
+            title="Spearman Correlation vs. Target Sparsity",
+            x_lab="Spearman Correlation",
+            y_lab="Target Sparsity",
+            save_to=file_name,
+        )
+
+        # RMSE vs. mean epxression target
+        plot_data = metrics.rename(
+            columns={
+                "rmse": "targets",
+                "target_mean": "predictions",
+            }
+        )[["targets", "predictions"]]
+
+        file_name = out_dir / "rmse_vs_target_expr.png"
+
+        p = plot_targets_vs_predictions(
+            plot_data,
+            title="RMSE vs. Mean Expression Target",
+            x_lab="RMSE",
+            y_lab="Mean Expressoin Target",
+            save_to=file_name,
+        )
+
+        logging.info(f"💾 Saved plots.")
