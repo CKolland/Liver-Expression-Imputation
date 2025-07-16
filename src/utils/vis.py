@@ -143,8 +143,8 @@ def calc_test_metrics(
 
     # Calculate global metrics on the entire dataset
     # Flatten sparse matrices to 1D arrays for global comparison
-    targets_flat = targets.flatten()
-    preds_flat = predictions.flatten()
+    targets_flat = targets.A1
+    preds_flat = predictions.A1
 
     # Compute global correlation metrics
     pearson_corr, _ = pearsonr(targets_flat, preds_flat)
