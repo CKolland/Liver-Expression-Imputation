@@ -43,6 +43,8 @@ def visualize_test(path_to_adata: str, custom_masks: str | None):
         masks = pd.read_feather(custom_masks)
 
         for mask in masks:
+            # TODO: Add solution for ST data:
+            # targets and predictions do not have same shape
             targets = adata.obsm["targets"][:, masks[mask].to_numpy()]
             predictions = adata.obsm["predictions"][:, masks[mask].to_numpy()]
             gene_names = masks[masks[mask]].index.to_list()

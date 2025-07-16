@@ -74,7 +74,10 @@ def _calc_axis_wise_metrics(
         [slice_func(targets, i).nnz / targets.shape[axis] for i in range(n_items)]
     )
     pred_sparsity = 1 - np.array(
-        [slice_func(targets, i).nnz / targets.shape[axis] for i in range(n_items)]
+        [
+            slice_func(predictions, i).nnz / predictions.shape[axis]
+            for i in range(n_items)
+        ]
     )
 
     # Compute metrics for each item (gene or cell)
