@@ -116,13 +116,12 @@ def calc_test_metrics(
     targets: sparse.csr_matrix,
     predictions: sparse.csr_matrix,
     gene_names: list[str] | None = None,
-) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Calculate comprehensive evaluation metrics for gene expression predictions.
 
-    This function computes three levels of metrics:
-    1. Global metrics: Overall performance across all genes and cells
-    2. Gene-wise metrics: Performance for each individual gene
-    3. Cell-wise metrics: Performance for each individual cell
+    This function computes two levels of metrics:
+    1. Gene-wise metrics: Performance for each individual gene
+    2. Cell-wise metrics: Performance for each individual cell
 
     :param targets: True expression values as sparse CSR matrix (cells x genes)
     :type targets: sparse.csr_matrix
@@ -132,7 +131,7 @@ def calc_test_metrics(
     :type gene_names: Optional[list[str]]
 
     :return: Tuple containing (global_metrics, gene_wise_metrics, cell_wise_metrics)
-    :rtype: tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]
+    :rtype: tuple[pd.DataFrame, pd.DataFrame]
     """
     n_cells, n_genes = targets.shape
 
@@ -140,39 +139,6 @@ def calc_test_metrics(
     cell_names = [f"cell_{i+1}" for i in range(n_cells)]
     if gene_names is None:
         gene_names = [f"gene_{i + 1}" for i in range(n_genes)]
-
-    # Calculate global metrics on the entire dataset
-    # Flatten sparse matrices to 1D arrays for global comparison
-    targets_flat = targets.toarray().ravel()
-    preds_flat = predictions.toarray().ravel()
-
-    # Compute global correlation metrics
-    pearson_corr, _ = pearsonr(targets_flat, preds_flat)
-    spearman_corr, _ = spearmanr(targets_flat, preds_flat)
-
-    # Compute global error metrics
-    mae = mean_absolute_error(targets_flat, preds_flat)
-    mse = mean_squared_error(targets_flat, preds_flat)
-    rmse = np.sqrt(mse)
-
-    # Compute global sparsity metrics
-    target_sparsity = np.sum(targets_flat == 0) / len(targets_flat)
-    pred_sparsity = np.sum(preds_flat == 0) / len(preds_flat)
-    sparsity_diff = np.abs(target_sparsity - pred_sparsity)
-
-    # Create global metrics DataFrame
-    global_metrics = pd.DataFrame(
-        {
-            "pearson_correlation": [pearson_corr],
-            "spearman_correlation": [spearman_corr],
-            "mae": [mae],
-            "mse": [mse],
-            "rmse": [rmse],
-            "target_sparsity": [target_sparsity],
-            "predicted_sparsity": [pred_sparsity],
-            "sparsity_difference": [sparsity_diff],
-        }
-    )
 
     # Calculate gene-wise metrics (performance for each gene across all cells)
     gene_wise_metrics = _calc_axis_wise_metrics(
@@ -192,7 +158,7 @@ def calc_test_metrics(
         label=C.CELL_LABEL,
     )
 
-    return global_metrics, gene_wise_metrics, cell_wise_metrics
+    return gene_wise_metrics, cell_wise_metrics
 
 
 def _validate_colors(colors: dict[str, str] | None) -> bool:

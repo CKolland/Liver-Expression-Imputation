@@ -47,15 +47,17 @@ def visualize_test(path_to_adata: str, custom_masks: str | None):
             predictions = adata.obsm["predictions"][:, masks[mask].to_numpy()]
             gene_names = masks[mask].index.to_list()
 
-            metrics = calc_test_metrics(targets, predictions, gene_names)
-            metrics.to_feather(out_dir / f"{mask}_{adata_file.stem}_metrics.feather")
+            gene_wise_metrics, _ = calc_test_metrics(targets, predictions, gene_names)
+            gene_wise_metrics.to_feather(
+                out_dir / f"{mask}_{adata_file.stem}_gene_wise_metrics.feather"
+            )
             logging.info(f"Saved metrics for mask '{mask}'.")
 
             # Histogram Pearson correlation
             file_name = out_dir / f"{mask}_pearson_frequency.png"
 
             p = plot_frequency(
-                metrics,
+                gene_wise_metrics,
                 "pearson_correlation",
                 title="Frequency Pearson Correlation",
                 x_lab="Pearson Correlation",
@@ -66,7 +68,7 @@ def visualize_test(path_to_adata: str, custom_masks: str | None):
             file_name = out_dir / f"{mask}_spearman_frequency.png"
 
             p = plot_frequency(
-                metrics,
+                gene_wise_metrics,
                 "spearman_correlation",
                 title="Frequency Spearman Correlation",
                 x_lab="Spearman Correlation",
@@ -74,7 +76,7 @@ def visualize_test(path_to_adata: str, custom_masks: str | None):
             )
 
             # Mean expression target vs. mean expression predicted
-            plot_data = metrics.rename(
+            plot_data = gene_wise_metrics.rename(
                 columns={
                     "target_mean": "targets",
                     "predicted_mean": "predictions",
@@ -95,7 +97,7 @@ def visualize_test(path_to_adata: str, custom_masks: str | None):
             file_name = out_dir / f"{mask}_mae_frequency.png"
 
             p = plot_frequency(
-                metrics,
+                gene_wise_metrics,
                 "mae",
                 title="Frequency MAE",
                 x_lab="MAE",
@@ -103,7 +105,7 @@ def visualize_test(path_to_adata: str, custom_masks: str | None):
             )
 
             # MAE vs. mean expression target
-            plot_data = metrics.rename(
+            plot_data = gene_wise_metrics.rename(
                 columns={
                     "mae": "targets",
                     "target_mean": "predictions",
@@ -121,7 +123,7 @@ def visualize_test(path_to_adata: str, custom_masks: str | None):
             )
 
             # Target sparsity vs. predicted sparsity
-            plot_data = metrics.rename(
+            plot_data = gene_wise_metrics.rename(
                 columns={
                     "target_sparsity": "targets",
                     "predicted_sparsity": "predictions",
@@ -139,7 +141,7 @@ def visualize_test(path_to_adata: str, custom_masks: str | None):
             )
 
             # Pearson correlation vs. target sparsity
-            plot_data = metrics.rename(
+            plot_data = gene_wise_metrics.rename(
                 columns={
                     "pearson_correlation": "targets",
                     "target_sparsity": "predictions",
@@ -157,7 +159,7 @@ def visualize_test(path_to_adata: str, custom_masks: str | None):
             )
 
             # Spearman correlation vs. target sparsity
-            plot_data = metrics.rename(
+            plot_data = gene_wise_metrics.rename(
                 columns={
                     "spearman_correlation": "targets",
                     "target_sparsity": "predictions",
@@ -175,7 +177,7 @@ def visualize_test(path_to_adata: str, custom_masks: str | None):
             )
 
             # RMSE vs. mean epxression target
-            plot_data = metrics.rename(
+            plot_data = gene_wise_metrics.rename(
                 columns={
                     "rmse": "targets",
                     "target_mean": "predictions",
@@ -198,15 +200,15 @@ def visualize_test(path_to_adata: str, custom_masks: str | None):
         predictions = adata.obsm["predictions"]
         gene_names = adata.var_names.to_list()
 
-        metrics = calc_test_metrics(targets, predictions, gene_names)
-        metrics.to_feather(out_dir / f"{adata_file.stem}_metrics.feather")
+        gene_wise_metrics, _ = calc_test_metrics(targets, predictions, gene_names)
+        gene_wise_metrics.to_feather(out_dir / f"{adata_file.stem}_metrics.feather")
         logging.info(f"Saved metrics.")
 
         # Histogram Pearson correlation
         file_name = out_dir / "pearson_frequency.png"
 
         p = plot_frequency(
-            metrics,
+            gene_wise_metrics,
             "pearson_correlation",
             title="Frequency Pearson Correlation",
             x_lab="Pearson Correlation",
@@ -217,7 +219,7 @@ def visualize_test(path_to_adata: str, custom_masks: str | None):
         file_name = out_dir / "spearman_frequency.png"
 
         p = plot_frequency(
-            metrics,
+            gene_wise_metrics,
             "spearman_correlation",
             title="Frequency Spearman Correlation",
             x_lab="Spearman Correlation",
@@ -225,7 +227,7 @@ def visualize_test(path_to_adata: str, custom_masks: str | None):
         )
 
         # Mean expression target vs. mean expression predicted
-        plot_data = metrics.rename(
+        plot_data = gene_wise_metrics.rename(
             columns={
                 "target_mean": "targets",
                 "predicted_mean": "predictions",
@@ -246,7 +248,7 @@ def visualize_test(path_to_adata: str, custom_masks: str | None):
         file_name = out_dir / "mae_frequency.png"
 
         p = plot_frequency(
-            metrics,
+            gene_wise_metrics,
             "mae",
             title="Frequency MAE",
             x_lab="MAE",
@@ -254,7 +256,7 @@ def visualize_test(path_to_adata: str, custom_masks: str | None):
         )
 
         # MAE vs. mean expression target
-        plot_data = metrics.rename(
+        plot_data = gene_wise_metrics.rename(
             columns={
                 "mae": "targets",
                 "target_mean": "predictions",
@@ -272,7 +274,7 @@ def visualize_test(path_to_adata: str, custom_masks: str | None):
         )
 
         # Target sparsity vs. predicted sparsity
-        plot_data = metrics.rename(
+        plot_data = gene_wise_metrics.rename(
             columns={
                 "target_sparsity": "targets",
                 "predicted_sparsity": "predictions",
@@ -290,7 +292,7 @@ def visualize_test(path_to_adata: str, custom_masks: str | None):
         )
 
         # Pearson correlation vs. target sparsity
-        plot_data = metrics.rename(
+        plot_data = gene_wise_metrics.rename(
             columns={
                 "pearson_correlation": "targets",
                 "target_sparsity": "predictions",
@@ -308,7 +310,7 @@ def visualize_test(path_to_adata: str, custom_masks: str | None):
         )
 
         # Spearman correlation vs. target sparsity
-        plot_data = metrics.rename(
+        plot_data = gene_wise_metrics.rename(
             columns={
                 "spearman_correlation": "targets",
                 "target_sparsity": "predictions",
@@ -326,7 +328,7 @@ def visualize_test(path_to_adata: str, custom_masks: str | None):
         )
 
         # RMSE vs. mean epxression target
-        plot_data = metrics.rename(
+        plot_data = gene_wise_metrics.rename(
             columns={
                 "rmse": "targets",
                 "target_mean": "predictions",
