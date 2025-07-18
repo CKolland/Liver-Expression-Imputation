@@ -617,7 +617,11 @@ class TestingPipeline:
 
         return results
 
-    def create_anndata(self, results: dict[str, Any]) -> ad.AnnData:
+    def create_anndata(
+        self,
+        results: dict[str, Any],
+        target_names: list[str],
+    ) -> ad.AnnData:
         """Create an AnnData object from the prediction results.
 
         Converts the testing results into an AnnData object, which is a standard
@@ -658,8 +662,11 @@ class TestingPipeline:
         adata.uns["model_info"] = {
             "model_name": self.model.__class__.__name__,
             "device": str(self.device),
-            "total_samples": len(results["input"]),
+            "shape_targets": adata.obsm["targets"].shape,
+            "shape_predictions": adata.obsm["predictions"].shape,
         }
+
+        adata.uns["target_names"] = target_names
 
         if self.logger is not None:
             self.logger.info(f"AnnData object created successfully.")

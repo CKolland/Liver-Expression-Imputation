@@ -51,22 +51,24 @@ def test_model(
     logger.info("----")
 
     # Load test data
-    testsets = []
+    adatas: list[ad.AnnData] = []
+    target_names: list[str] = []
     test_config = confy.setup_dataset(run_setup["test_data"])
-    for idx, testset in enumerate(test_config):
-        test_data_config = test_config.config[testset]
-        test_data = ad.read_h5ad(test_data_config["path"])
+    for idx, test_data in enumerate(test_config):
+        test_data_config = test_config.config[test_data]
+        tdata = ad.read_h5ad(test_data_config["path"])
         logger.info(
             f"📁 Test data {idx + 1} loaded successfully: '{test_data_config['path']}'."
         )
 
         # Choose data layer if provided
         if test_data_config["layer"] is not None:
-            test_data.X = test_data.layers[test_data_config["layer"]]
+            tdata.X = tdata.layers[test_data_config["layer"]]
             logger.info(f"Selected {test_data_config['layer']} as data layer.")
 
-        logger.debug(test_data)
-        testsets.append(test_data)
+        adatas.append(tdata)
+        target_names.append(tdata.var_names.to_list())
+        logger.debug(tdata)
 
     # Load imputation mask
     masking_config = confy.setup_dataset(run_setup["imputation_mask"])
@@ -74,9 +76,9 @@ def test_model(
     imputation_mask = imputation_mask[0].tolist()
     logger.info(f"📁 Mask for imputation loaded successfully: '{masking_config.path}'.")
 
-    test_datasets = []
-    for idx, testset in enumerate(testsets):
-        test_dataset = ImputationDataset(testset, imputation_mask)
+    test_datasets: list[ImputationDataset] = []
+    for idx, adata in enumerate(adatas):
+        test_dataset = ImputationDataset(adata, imputation_mask)
         logger.info(f"Created testing dataset {idx + 1}.")
         logger.debug(test_dataset)
         test_datasets.append(test_dataset)
@@ -120,9 +122,10 @@ def test_model(
 
         pipeline = TestingPipeline(test_loader, mlp, device, logger=logger)
         results = pipeline.test()
-        adata = pipeline.create_anndata(results)
+
+        adata = pipeline.create_anndata(results, target_names)
 
         # Save AnnData object
         save_path = run_dir / f"{model_config.name}_test_{idx + 1}_{now}.h5ad"
-        adata.write(save_path)
+        adata.write(save_path, compression="gzip")
         logger.info(f"Wrote AnnData successfully to file: '{save_path}'")
