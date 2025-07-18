@@ -274,6 +274,7 @@ def plot_targets_vs_predictions(
     title: str = "",
     x_lab: str = "Targets",
     y_lab: str = "Predictions",
+    add_diag: bool = True,
     save_to: str = "targets_vs_predictions.png",
 ) -> ggplot:
     """Create a scatter plot of targets vs predictions with a diagonal reference line.
@@ -312,19 +313,20 @@ def plot_targets_vs_predictions(
         + labs(title=title, x=x_lab, y=y_lab)
     )
 
-    # Calculate bounds for diagonal reference line (perfect prediction line)
-    min_val = min(data["targets"].min(), data["predictions"].min())
-    max_val = max(data["targets"].max(), data["predictions"].max())
-    diagonal = pd.DataFrame({"x": [min_val, max_val], "y": [min_val, max_val]})
+    if add_diag:
+        # Calculate bounds for diagonal reference line (perfect prediction line)
+        min_val = min(data["targets"].min(), data["predictions"].min())
+        max_val = max(data["targets"].max(), data["predictions"].max())
+        diagonal = pd.DataFrame({"x": [min_val, max_val], "y": [min_val, max_val]})
 
-    # Add diagonal reference line to the plot
-    plot = plot + geom_line(
-        data=diagonal,
-        mapping=aes(x="x", y="y"),
-        color=C.DIAGONAL_COLOR,
-        linetype="dashed",
-        alpha=C.DIAGONAL_ALPHA,
-    )
+        # Add diagonal reference line to the plot
+        plot = plot + geom_line(
+            data=diagonal,
+            mapping=aes(x="x", y="y"),
+            color=C.DIAGONAL_COLOR,
+            linetype="dashed",
+            alpha=C.DIAGONAL_ALPHA,
+        )
 
     plot = (
         plot

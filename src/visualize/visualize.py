@@ -93,6 +93,7 @@ def visualize_test(path_to_adata: str, custom_masks: str | None):
                 title="Target vs. Predicted Expression",
                 x_lab="Mean Expression Targets",
                 y_lab="Mean Expression Predictions",
+                add_diag=True,
                 save_to=file_name,
             )
 
@@ -122,6 +123,7 @@ def visualize_test(path_to_adata: str, custom_masks: str | None):
                 title="MAE vs. Target Expression",
                 x_lab="MAE",
                 y_lab="Mean Expression Targets",
+                add_diag=False,
                 save_to=file_name,
             )
 
@@ -140,6 +142,7 @@ def visualize_test(path_to_adata: str, custom_masks: str | None):
                 title="Target vs. Predicted Sparsity",
                 x_lab="Target Sparsity",
                 y_lab="Predicted Sparsity",
+                add_diag=True,
                 save_to=file_name,
             )
 
@@ -158,6 +161,7 @@ def visualize_test(path_to_adata: str, custom_masks: str | None):
                 title="Pearson Correlation vs. Target Sparsity",
                 x_lab="Pearson Correlation",
                 y_lab="Target Sparsity",
+                add_diag=False,
                 save_to=file_name,
             )
 
@@ -176,6 +180,7 @@ def visualize_test(path_to_adata: str, custom_masks: str | None):
                 title="Spearman Correlation vs. Target Sparsity",
                 x_lab="Spearman Correlation",
                 y_lab="Target Sparsity",
+                add_diag=False,
                 save_to=file_name,
             )
 
@@ -194,6 +199,7 @@ def visualize_test(path_to_adata: str, custom_masks: str | None):
                 title="RMSE vs. Mean Expression Target",
                 x_lab="RMSE",
                 y_lab="Mean Expressoin Target",
+                add_diag=False,
                 save_to=file_name,
             )
 
@@ -244,6 +250,7 @@ def visualize_test(path_to_adata: str, custom_masks: str | None):
             title="Target vs. Predicted Expression",
             x_lab="Mean Expression Targets",
             y_lab="Mean Expression Predictions",
+            add_diag=True,
             save_to=file_name,
         )
 
@@ -273,6 +280,7 @@ def visualize_test(path_to_adata: str, custom_masks: str | None):
             title="MAE vs. Target Expression",
             x_lab="MAE",
             y_lab="Mean Expression Targets",
+            add_diag=False,
             save_to=file_name,
         )
 
@@ -291,6 +299,7 @@ def visualize_test(path_to_adata: str, custom_masks: str | None):
             title="Target vs. Predicted Sparsity",
             x_lab="Target Sparsity",
             y_lab="Predicted Sparsity",
+            add_diag=True,
             save_to=file_name,
         )
 
@@ -309,6 +318,7 @@ def visualize_test(path_to_adata: str, custom_masks: str | None):
             title="Pearson Correlation vs. Target Sparsity",
             x_lab="Pearson Correlation",
             y_lab="Target Sparsity",
+            add_diag=False,
             save_to=file_name,
         )
 
@@ -327,6 +337,7 @@ def visualize_test(path_to_adata: str, custom_masks: str | None):
             title="Spearman Correlation vs. Target Sparsity",
             x_lab="Spearman Correlation",
             y_lab="Target Sparsity",
+            add_diag=False,
             save_to=file_name,
         )
 
@@ -345,6 +356,7 @@ def visualize_test(path_to_adata: str, custom_masks: str | None):
             title="RMSE vs. Mean Expression Target",
             x_lab="RMSE",
             y_lab="Mean Expressoin Target",
+            add_diag=False,
             save_to=file_name,
         )
 
