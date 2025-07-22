@@ -364,6 +364,11 @@ class TrainingPipeline:
         if self.seed is not None:
             torch.manual_seed(self.seed)
             np.random.seed(self.seed)
+
+            if self.device == "cuda":
+                torch.cuda.manual_seed(self.seed)
+                torch.cuda.manual_seed_all(self.seed)
+
             self.logger.debug(f"Train model based on seed: {self.seed}")
 
         # Initialize KFold splitter with deterministic shuffling if seed is provided
@@ -502,7 +507,7 @@ class TrainingPipeline:
         """
         try:
             # Save the best model weights
-            torch.save(model.state_dict(), save_path / "best_model.pth")
+            torch.save(model.state_dict(), save_path / "best_model_state.pth")
 
             # Convert and save detailed metrics as a feather file
             detailed_metrics = metrics.to_data_frame()
