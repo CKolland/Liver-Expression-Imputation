@@ -52,7 +52,7 @@ def test_model(
 
     # Load test data
     adatas: list[ad.AnnData] = []
-    target_names: list[str] = []
+    target_names: list[list[str]] = []
     test_config = confy.setup_dataset(run_setup["test_data"])
     for idx, test_data in enumerate(test_config):
         test_data_config = test_config.config[test_data]
@@ -123,7 +123,7 @@ def test_model(
         pipeline = TestingPipeline(test_loader, mlp, device, logger=logger)
         results = pipeline.test()
 
-        adata = pipeline.create_anndata(results, target_names)
+        adata = pipeline.create_anndata(results, target_names[idx])
 
         # Save AnnData object
         save_path = run_dir / f"{model_config.name}_test_{idx + 1}_{now}.h5ad"
