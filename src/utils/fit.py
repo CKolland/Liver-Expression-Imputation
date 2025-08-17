@@ -667,8 +667,8 @@ class TestingPipeline:
         adata.uns["model_info"] = {
             "model_name": self.model.__class__.__name__,
             "device": str(self.device),
-            "shape_targets": adata.obsm["targets"].shape,
-            "shape_predictions": adata.obsm["predictions"].shape,
+            "shape_targets": list(adata.obsm["targets"].shape),
+            "shape_predictions": list(adata.obsm["predictions"].shape),
         }
 
         adata.uns["target_names"] = target_names
