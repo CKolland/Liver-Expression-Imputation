@@ -671,7 +671,7 @@ class TestingPipeline:
             "shape_predictions": list(adata.obsm["predictions"].shape),
         }
 
-        adata.uns["target_names"] = target_names
+        # adata.uns["target_names"] = target_names
 
         if self.logger is not None:
             self.logger.info(f"AnnData object created successfully.")
