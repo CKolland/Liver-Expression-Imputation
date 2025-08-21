@@ -45,7 +45,8 @@ def visualize_test(path_to_adata: str, custom_masks: str | None):
 
         for mask in masks:
             mask_names = masks[masks[mask]].index.to_list()
-            target_indices = np.where(np.isin(adata.uns["target_names"], mask_names))
+            # Returns tuple therefor 0 index has to be accessed
+            target_indices = np.where(np.isin(adata.uns["target_names"], mask_names))[0]
             targets = adata.obsm["targets"][:, target_indices]
             predictions = adata.obsm["predictions"][:, masks[mask].to_numpy()]
             gene_names = masks[masks[mask]].index.to_list()
