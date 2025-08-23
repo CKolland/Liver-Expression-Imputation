@@ -1,5 +1,4 @@
 import argparse
-from pathlib import Path
 
 import visualize._constants as C
 from visualize.visualize import visualize_test, compute_metrics_on_threshold
@@ -74,7 +73,7 @@ def main():
     if args.command == C.SUB_COMMAND_TEST:
         visualize_test(args.adata, args.masks)
     elif args.command == C.SUB_COMMAND_THRESHOLD:
-        compute_metrics_on_threshold(Path(args.adata), Path(args.masks), args.threshold)
+        compute_metrics_on_threshold(args.adata, args.masks, args.threshold)
 
 
 if __name__ == "__main__":

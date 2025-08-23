@@ -35,7 +35,7 @@ TEST_MASKS_HELP = "Path to data frame that contains the masks."
 # ------------------------
 
 # Command parser setup
-SUB_COMMAND_THRESHOLD = "treshold"
+SUB_COMMAND_THRESHOLD = "threshold"
 THRESHOLD_HELP = (
     "Calculate gene-wise test metrics with applied threshold to predicted values."
 )

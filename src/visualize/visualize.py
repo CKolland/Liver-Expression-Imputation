@@ -1,5 +1,4 @@
 import logging
-from pathlib import Path
 
 import anndata as ad
 import numpy as np
@@ -372,10 +371,19 @@ def visualize_test(path_to_adata: str, custom_masks: str | None):
 
 
 def compute_metrics_on_threshold(
-    path_to_adata: Path,
-    path_to_masks: Path,
+    path_to_adata: str,
+    path_to_masks: str,
     threshold: float,
 ):
+    """_summary_
+
+    :param path_to_adata: _description_
+    :type path_to_adata: str
+    :param path_to_masks: _description_
+    :type path_to_masks: str
+    :param threshold: _description_
+    :type threshold: float
+    """
     # Setup custom logging
     logging.basicConfig(
         level=getattr(logging, C.LOGGING_LVL_CONSOLE),
