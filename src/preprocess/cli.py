@@ -163,7 +163,7 @@ def main():
     parser_subset.add_argument(
         C.SUBSET_SHUFFLE_LONG,
         C.SUBSET_SHUFFLE_SHORT,
-        help=C.SUBSET_COLS_HELP,
+        help=C.SUBSET_SHUFFLE_HELP,
         action="store_true",
     )
 

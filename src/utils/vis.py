@@ -399,3 +399,14 @@ def plot_frequency(
     ggsave(plot, save_to, dpi=C.PLOT_DPI)
 
     return plot
+
+
+def apply_threshold(
+    predictions: sparse.csr_matrix,
+    threshold: float = 0.05,
+) -> sparse.csr_matrix:
+    """_summary_"""
+    predictions.data[predictions.data < threshold] = 0
+    predictions.eliminate_zeros()
+
+    return predictions
