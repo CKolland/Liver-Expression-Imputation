@@ -47,9 +47,7 @@ THRESHOLD_MASKS_LONG = "--masks"
 THRESHOLD_MASKS_SHORT = "-m"
 THRESHOLD_MASKS_DEFAULT = None
 THRESHOLD_MASKS_HELP = "Path to data frame that contains the masks."
-THRESHOLD_MASKS_LONG = "--threshold"
-THRESHOLD_MASKS_SHORT = "-t"
-THRESHOLD_MASKS_DEFAULT = 0.05
-THRESHOLD_MASKS_HELP = (
-    "Threshold that is applied to predicted values. Defaults to 0.05."
-)
+THRESHOLD_LONG = "--threshold"
+THRESHOLD_SHORT = "-t"
+THRESHOLD_DEFAULT = 0.05
+THRESHOLD_HELP = "Threshold that is applied to predicted values. Defaults to 0.05."
