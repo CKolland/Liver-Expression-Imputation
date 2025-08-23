@@ -413,7 +413,7 @@ def compute_metrics_on_threshold(
         gene_names = masks[masks[mask]].index.to_list()
 
         # Apply threshold to predictions
-        predictions = apply_threshold(predictions, threshold=threshold)
+        predictions = apply_threshold(predictions, threshold=float(threshold))
 
         gene_wise_metrics, _ = calc_test_metrics(targets, predictions, gene_names)
         gene_wise_metrics.to_feather(
