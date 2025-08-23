@@ -401,6 +401,97 @@ def plot_frequency(
     return plot
 
 
+def calc_baseline(
+    targets: sparse.csr_matrix,
+    predictions: sparse.csr_matrix,
+    gene_names: list[str],
+) -> pd.DataFrame:
+    """
+    Calculate baseline metrics comparing predictions against mean-based baseline.
+
+    :param targets: Target sparse matrix
+    :type targets: sparse.csr_matrix
+    :param predictions: Predictions sparse matrix
+    :type predictions: sparse.csr_matrix
+    :param gene_names: List of gene names
+    :type gene_names: list[str]
+    :return: DataFrame with metrics per gene
+    :rtype: pd.DataFrame
+    """
+    # Convert to appropriate sparse format for efficient column-wise operations
+    targets = targets.tocsc()
+    predictions = predictions.tocsc()
+
+    n_items = targets.shape[1]
+    slice_func = lambda mat, i: mat[:, i]
+
+    pearson_corrs, spearman_corrs = np.zeros(n_items), np.zeros(n_items)
+    mse_vals, mae_vals = np.zeros(n_items), np.zeros(n_items)
+
+    # Compute mean values for baseline
+    gene_means = np.array(targets.mean(axis=0)).ravel()
+
+    # Create baseline matrix (mean predictor)
+    # Only store non-zero values from gene_means
+    nonzero_genes = gene_means != 0
+    if np.any(nonzero_genes):
+        # Get indices and values of non-zero genes
+        gene_indices = np.where(nonzero_genes)[0]
+        gene_values = gene_means[nonzero_genes]
+        # Create row indices (repeat for each cell)
+        row_indices = np.tile(np.arange(targets.shape[0]), len(gene_indices))
+        # Create column indices (repeat each gene index n_cells times)
+        col_indices = np.repeat(gene_indices, targets.shape[0])
+        # Create data array (repeat each gene value n_cells times)
+        data = np.repeat(gene_values, targets.shape[0])
+        # Create COO matrix first, then convert to CSC
+        coo_matrix = sparse.coo_matrix(
+            (data, (row_indices, col_indices)),
+            shape=(targets.shape[0], targets.shape[1]),
+        )
+        baseline = coo_matrix.tocsc()
+    else:
+        # All genes have zero mean -> Create empty matrix
+        baseline = sparse.csc_matrix((targets.shape[0], targets.shape[1]))
+
+    # Calculate sparsity (proportion of zero values)
+    baseline_sparsity = 1 - np.array(
+        [slice_func(baseline, i).nnz / baseline.shape[0] for i in range(n_items)]
+    )
+    pred_sparsity = 1 - np.array(
+        [slice_func(predictions, i).nnz / predictions.shape[0] for i in range(n_items)]
+    )
+
+    # Compute metrics for each item (gene)
+    for i in range(n_items):
+        baseline_vec = slice_func(baseline, i).toarray().ravel()
+        pred_vec = slice_func(predictions, i).toarray().ravel()
+        # Compute error metrics
+        mae_vals[i] = np.mean(np.abs(baseline_vec - pred_vec))
+        mse_vals[i] = np.mean(np.square(baseline_vec - pred_vec))
+        # Compute correlation metrics with error handling
+        try:
+            pearson_corrs[i], _ = pearsonr(baseline_vec, pred_vec)
+            spearman_corrs[i], _ = spearmanr(baseline_vec, pred_vec)
+        except (ValueError, RuntimeWarning):
+            # Handle cases where correlation cannot be computed (e.g., constant values)
+            pearson_corrs[i], spearman_corrs[i] = np.nan, np.nan
+
+    # Compile all metrics into a dictionary
+    metrics = {
+        "gene_name": gene_names,  # Fixed: proper key name
+        "pearson_correlation": pearson_corrs,
+        "spearman_correlation": spearman_corrs,
+        "mae": mae_vals,
+        "mse": mse_vals,
+        "rmse": np.sqrt(mse_vals),
+        "target_sparsity": baseline_sparsity,
+        "predicted_sparsity": pred_sparsity,
+        "sparsity_difference": np.abs(baseline_sparsity - pred_sparsity),
+    }
+    return pd.DataFrame(metrics)
+
+
 def apply_threshold(
     predictions: sparse.csr_matrix,
     threshold: float = 0.05,

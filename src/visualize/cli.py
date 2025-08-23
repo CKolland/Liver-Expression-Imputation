@@ -1,7 +1,11 @@
 import argparse
 
 import visualize._constants as C
-from visualize.visualize import visualize_test, compute_metrics_on_threshold
+from visualize.visualize import (
+    visualize_test,
+    compute_metrics_against_baseline,
+    compute_metrics_on_threshold,
+)
 
 
 def main():
@@ -38,6 +42,29 @@ def main():
         help=C.TEST_MASKS_HELP,
     )
 
+    # --------------------------
+    #     `baseline` command
+    # --------------------------
+
+    # Visualizes test results
+    parser_baseline = subparsers.add_parser(
+        C.SUB_COMMAND_BASELINE, help=C.BASELINE_HELP
+    )
+
+    parser_baseline.add_argument(
+        C.BASELINE_ADATA_LONG,
+        C.BASELINE_ADATA_SHORT,
+        type=str,
+        required=True,
+        help=C.BASELINE_ADATA_HELP,
+    )
+    parser_baseline.add_argument(
+        C.BASELINE_MASKS_LONG,
+        C.BASELINE_MASKS_SHORT,
+        default=C.BASELINE_MASKS_DEFAULT,
+        help=C.BASELINE_MASKS_HELP,
+    )
+
     # ----------------------
     #     `threshold` command
     # ----------------------
@@ -72,6 +99,8 @@ def main():
 
     if args.command == C.SUB_COMMAND_TEST:
         visualize_test(args.adata, args.masks)
+    elif args.command == C.SUB_COMMAND_BASELINE:
+        compute_metrics_against_baseline(args.adata, args.masks)
     elif args.command == C.SUB_COMMAND_THRESHOLD:
         compute_metrics_on_threshold(args.adata, args.masks, args.threshold)
 

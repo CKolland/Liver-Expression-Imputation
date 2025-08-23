@@ -13,7 +13,6 @@ LOGGING_LVL_CONSOLE = "INFO"
 LOGGING_FORMAT = "[%(levelname)s] %(asctime)s |> %(message)s"
 LOGGING_DATEFMT = "%Y-%m-%d %H:%M:%S"
 
-
 # ------------------------
 #     `test` command
 # ------------------------
@@ -29,6 +28,24 @@ TEST_MASKS_LONG = "--masks"
 TEST_MASKS_SHORT = "-m"
 TEST_MASKS_DEFAULT = None
 TEST_MASKS_HELP = "Path to data frame that contains the masks."
+
+# ------------------------
+#     `baseline` command
+# ------------------------
+
+# Command parser setup
+SUB_COMMAND_BASELINE = "baseline"
+BASELINE_HELP = (
+    "Calculate gene-wise test metrics for the baseline against the predicted values."
+)
+
+TEST_BASELINE_LONG = "--adata"
+TEST_BASELINE_SHORT = "-d"
+TEST_BASELINE_HELP = "Paths to AnnData (.h5ad) file."
+TEST_BASELINE_LONG = "--masks"
+TEST_BASELINE_SHORT = "-m"
+TEST_BASELINE_DEFAULT = None
+TEST_BASELINE_HELP = "Path to data frame that contains the masks."
 
 # ------------------------
 #     `threshold` command

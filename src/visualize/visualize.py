@@ -8,6 +8,7 @@ import scipy.sparse as sparse
 from utils.io import assert_path
 from utils.vis import (
     apply_threshold,
+    calc_baseline,
     calc_test_metrics,
     plot_frequency,
     plot_targets_vs_predictions,
@@ -418,4 +419,51 @@ def compute_metrics_on_threshold(
         gene_wise_metrics, _ = calc_test_metrics(targets, predictions, gene_names)
         gene_wise_metrics.to_feather(
             out_dir / f"{mask}_{adata_file.stem}_threshold_gene_metrics.feather"
+        )
+
+
+def compute_metrics_against_baseline(
+    path_to_adata: str,
+    path_to_masks: str,
+):
+    """_summary_
+
+    :param path_to_adata: _description_
+    :type path_to_adata: str
+    :param path_to_masks: _description_
+    :type path_to_masks: str
+    :param threshold: _description_
+    :type threshold: float
+    """
+    # Setup custom logging
+    logging.basicConfig(
+        level=getattr(logging, C.LOGGING_LVL_CONSOLE),
+        format=C.LOGGING_FORMAT,
+        datefmt=C.LOGGING_DATEFMT,
+    )
+
+    logging.info("✅ Setup complete.")
+    logging.info("----")
+
+    adata_file = assert_path(path_to_adata, assert_dir=False)
+    adata = ad.read_h5ad(adata_file)
+    logging.info(f"AnnData object loaded successfully.\n{adata}")
+
+    out_dir = adata_file.parent / f"{adata_file.stem}_figures"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    logging.info(f"All metrics are saved in '{out_dir}'.")
+
+    masks = pd.read_feather(path_to_masks)
+
+    for mask in masks:
+        mask_names = masks[masks[mask]].index.to_list()
+        # Returns tuple therefor 0 index has to be accessed
+        target_indices = np.where(np.isin(adata.uns["target_names"], mask_names))[0]
+        targets = adata.obsm["targets"][:, target_indices]
+        predictions = adata.obsm["predictions"][:, masks[mask].to_numpy()]
+        gene_names = masks[masks[mask]].index.to_list()
+
+        gene_wise_metrics = calc_baseline(targets, predictions, gene_names)
+        gene_wise_metrics.to_feather(
+            out_dir / f"{mask}_{adata_file.stem}_baseline_gene_metrics.feather"
         )
