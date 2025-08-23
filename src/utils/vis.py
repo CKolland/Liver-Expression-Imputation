@@ -406,6 +406,7 @@ def apply_threshold(
     threshold: float = 0.05,
 ) -> sparse.csr_matrix:
     """_summary_"""
+    predictions.data = predictions.data.astype(float)
     predictions.data[predictions.data < threshold] = 0
     predictions.eliminate_zeros()
 
