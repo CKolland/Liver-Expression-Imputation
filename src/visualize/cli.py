@@ -48,20 +48,20 @@ def main():
         C.SUB_COMMAND_THRESHOLD, help=C.THRESHOLD_HELP
     )
 
-    parser_test.add_argument(
+    parser_threshold.add_argument(
         C.THRESHOLD_ADATA_LONG,
         C.THRESHOLD_ADATA_SHORT,
         type=str,
         required=True,
         help=C.THRESHOLD_ADATA_HELP,
     )
-    parser_test.add_argument(
+    parser_threshold.add_argument(
         C.THRESHOLD_MASKS_LONG,
         C.THRESHOLD_MASKS_SHORT,
         default=C.THRESHOLD_MASKS_DEFAULT,
         help=C.THRESHOLD_MASKS_HELP,
     )
-    parser_test.add_argument(
+    parser_threshold.add_argument(
         C.THRESHOLD_LONG,
         C.THRESHOLD_SHORT,
         default=C.THRESHOLD_DEFAULT,
