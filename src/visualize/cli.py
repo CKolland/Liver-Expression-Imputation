@@ -45,27 +45,27 @@ def main():
 
     # Visualizes test results
     parser_threshold = subparsers.add_parser(
-        C.SUB_COMMAND_TRHESHOLD, help=C.THRESHOLD_HELP
+        C.SUB_COMMAND_THRESHOLD, help=C.THRESHOLD_HELP
     )
 
     parser_test.add_argument(
-        C.TRHESHOLD_ADATA_LONG,
-        C.TRHESHOLD_ADATA_SHORT,
+        C.THRESHOLD_ADATA_LONG,
+        C.THRESHOLD_ADATA_SHORT,
         type=str,
         required=True,
-        help=C.TRHESHOLD_ADATA_HELP,
+        help=C.THRESHOLD_ADATA_HELP,
     )
     parser_test.add_argument(
-        C.TRHESHOLD_MASKS_LONG,
-        C.TRHESHOLD_MASKS_SHORT,
-        default=C.TRHESHOLD_MASKS_DEFAULT,
-        help=C.TRHESHOLD_MASKS_HELP,
+        C.THRESHOLD_MASKS_LONG,
+        C.THRESHOLD_MASKS_SHORT,
+        default=C.THRESHOLD_MASKS_DEFAULT,
+        help=C.THRESHOLD_MASKS_HELP,
     )
     parser_test.add_argument(
-        C.TRHESHOLD_LONG,
-        C.TRHESHOLD_SHORT,
-        default=C.TRHESHOLD_DEFAULT,
-        help=C.TRHESHOLD_HELP,
+        C.THRESHOLD_LONG,
+        C.THRESHOLD_SHORT,
+        default=C.THRESHOLD_DEFAULT,
+        help=C.THRESHOLD_HELP,
     )
 
     # Parse command-line arguments
@@ -73,7 +73,7 @@ def main():
 
     if args.command == C.SUB_COMMAND_TEST:
         visualize_test(args.adata, args.masks)
-    elif args.command == C.SUB_COMMAND_TRHESHOLD:
+    elif args.command == C.SUB_COMMAND_THRESHOLD:
         compute_metrics_on_threshold(Path(args.adata), Path(args.masks), args.threshold)
 
 
