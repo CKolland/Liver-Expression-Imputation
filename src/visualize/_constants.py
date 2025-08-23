@@ -39,13 +39,13 @@ BASELINE_HELP = (
     "Calculate gene-wise test metrics for the baseline against the predicted values."
 )
 
-TEST_BASELINE_LONG = "--adata"
-TEST_BASELINE_SHORT = "-d"
-TEST_BASELINE_HELP = "Paths to AnnData (.h5ad) file."
-TEST_BASELINE_LONG = "--masks"
-TEST_BASELINE_SHORT = "-m"
-TEST_BASELINE_DEFAULT = None
-TEST_BASELINE_HELP = "Path to data frame that contains the masks."
+BASELINE_ADATA_LONG = "--adata"
+BASELINE_ADATA_SHORT = "-d"
+BASELINE_ADATA_HELP = "Paths to AnnData (.h5ad) file."
+BASELINE_MASKS_LONG = "--masks"
+BASELINE_MASKS_SHORT = "-m"
+BASELINE_MASKS_DEFAULT = None
+BASELINE_MASKS_HELP = "Path to data frame that contains the masks."
 
 # ------------------------
 #     `threshold` command
