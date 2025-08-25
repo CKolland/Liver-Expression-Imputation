@@ -9,17 +9,17 @@ files = [
 for idx, file in enumerate(files):
     # Load your original AnnData object
     adata = ad.read_h5ad(file)
-    print(f"Loaded AnnData:\{adata}")
+    print(f"Loaded AnnData:\n{adata}")
 
     # Extract predictions from .obsm (adjust key if needed)
     preds_csr = adata.obsm["predictions"]
 
     # Create new AnnData object from predictions
     adata_preds = ad.AnnData(X=preds_csr)
-    print(f"Created new AnnData:\{adata_preds}")
+    print(f"Created new AnnData:\n{adata_preds}")
 
-    adata.X.data[adata.X.data < 0] = 0
-    adata.X.eliminate_zeros()
+    adata_preds.X.data[adata_preds.X.data < 0] = 0
+    adata_preds.X.eliminate_zeros()
 
     # Normalize the data (library-size correction to 1e4 counts per cell)
     sc.pp.normalize_total(adata_preds, target_sum=1e4)
