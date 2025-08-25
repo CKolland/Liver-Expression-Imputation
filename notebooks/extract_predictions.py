@@ -1,19 +1,23 @@
 import anndata as ad
-import pandas as pd
+import scanpy as sc
 
-# Load your AnnData object
-adata = ad.read_h5ad(
-    "../output/impact_seed/sc_imp_seed_13_run_2025-07-24_15-12/model_test_run_2025-08-20_02-13/sc_imp_seed_13_test_1_2025-08-20_02-13.h5ad",
-    backed=True,
-)
+files = [
+    "~/dev/Liver-Expression-Imputation/output/impact_seed/sc_imp_seed_13_run_2025-07-24_15-12/model_test_run_2025-08-20_02-13/sc_imp_seed_13_test_1_2025-08-20_02-13.h5ad",
+    "~/dev/Liver-Expression-Imputation/output/impact_seed/sc_imp_seed_13_run_2025-07-24_15-12/model_test_run_2025-08-20_02-13/sc_imp_seed_13_test_2_2025-08-20_02-13.h5ad",
+]
 
-# Extract predictions from .obsm (replace "predictions" with your actual key)
-preds_csr = adata.obsm["predictions"]
+for idx, file in enumerate(files):
+    # Load your original AnnData object
+    adata = ad.read_h5ad(file)
 
-# Convert csr_matrix to dense DataFrame
-preds_df = pd.DataFrame(
-    preds_csr.toarray(),
-)
+    # Extract predictions from .obsm (adjust key if needed)
+    preds_csr = adata.obsm["predictions"]
 
-# Save to CSV
-preds_df.to_csv("scRNA-seq_predictions.csv")
+    # Create new AnnData object from predictions
+    adata_preds = ad.AnnData(X=preds_csr)
+
+    # Normalize the data (library-size correction to 1e4 counts per cell)
+    sc.pp.normalize_total(adata_preds, target_sum=1e4)
+
+    # Save in gzipped mode
+    adata_preds.write(f"predictions_{idx + 1}_normalized.h5ad", compression="gzip")
