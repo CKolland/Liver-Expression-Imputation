@@ -22,6 +22,7 @@ for idx, file in enumerate(files):
     adata_preds.X.eliminate_zeros()
 
     # Normalize the data (library-size correction to 1e4 counts per cell)
+    sc.pp.log1p(adata_preds)
     sc.pp.normalize_total(adata_preds, target_sum=1e4)
     print("Normalized data.")
 
