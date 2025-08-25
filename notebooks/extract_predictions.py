@@ -18,6 +18,9 @@ for idx, file in enumerate(files):
     adata_preds = ad.AnnData(X=preds_csr)
     print(f"Created new AnnData:\{adata_preds}")
 
+    adata.X.data[adata.X.data < 0] = 0
+    adata.X.eliminate_zeros()
+
     # Normalize the data (library-size correction to 1e4 counts per cell)
     sc.pp.normalize_total(adata_preds, target_sum=1e4)
     print("Normalized data.")
