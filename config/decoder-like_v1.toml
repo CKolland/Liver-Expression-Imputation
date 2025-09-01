@@ -19,7 +19,7 @@ path = "data/test_data.h5ad"
 layer = "log1p"
 
 [model]
-name = "liver_imputation_v1"
+name = "Decoder-like_V1"
 type = "mlp"
 n_layers = 3
 
@@ -44,9 +44,9 @@ dropout = 0.2
 
 [training]
 seed = 27062025
-kfolds = 5
-batch_size = 256
-epochs = 500
+kfolds = 6
+batch_size = 128
+epochs = 100
 loss = "mse"
 num_workers = 8
 
@@ -57,4 +57,4 @@ delta = 0
 [training.optimization]
 optimizer = "adam"
 learning_rate = 1e-3
-weight_decay = 1e-4
+weight_decay = 1e-2
