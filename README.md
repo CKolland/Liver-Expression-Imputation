@@ -4,7 +4,7 @@ Goethe University Frankfurt
 **Thesis Title:**  
 *Neural Network-Based Gene Expression Imputation for Subcellular Spatial Transcriptomics Data*
 
-For the companion repository focusing on model training and evaluation, see: [EDA-Spatial-Liver](https://github.com/CKolland/EDA-Spatial-Liver)Liver-Expression-Imputation.
+For the companion repository focusing on model training and evaluation, see: [EDA-Spatial-Liver](https://github.com/CKolland/EDA-Spatial-Liver).
 
 # STEXI
 
