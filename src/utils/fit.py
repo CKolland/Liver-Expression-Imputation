@@ -7,6 +7,7 @@ from typing import Any
 import anndata as ad
 import numpy as np
 import pandas as pd
+from scipy.sparse import csr_matrix
 from sklearn.model_selection import KFold
 import torch
 import torch.nn as nn
@@ -363,6 +364,11 @@ class TrainingPipeline:
         if self.seed is not None:
             torch.manual_seed(self.seed)
             np.random.seed(self.seed)
+
+            if self.device == "cuda":
+                torch.cuda.manual_seed(self.seed)
+                torch.cuda.manual_seed_all(self.seed)
+
             self.logger.debug(f"Train model based on seed: {self.seed}")
 
         # Initialize KFold splitter with deterministic shuffling if seed is provided
@@ -394,7 +400,7 @@ class TrainingPipeline:
                 batch_size=self.batch_size,
                 shuffle=False,
                 num_workers=self.num_workers,
-                pin_memory=True,
+                pin_memory=True if torch.cuda.is_available() else False,
             )
 
             # Reset weights of model in fresh fold
@@ -501,7 +507,7 @@ class TrainingPipeline:
         """
         try:
             # Save the best model weights
-            torch.save(model.state_dict(), save_path / "best_model.pth")
+            torch.save(model.state_dict(), save_path / "best_model_state.pth")
 
             # Convert and save detailed metrics as a feather file
             detailed_metrics = metrics.to_data_frame()
@@ -540,11 +546,12 @@ class TestingPipeline:
         test_loader: DataLoader,
         model: nn.Module,
         device: torch.device,
+        cell_types: list[str] | None = None,
         logger: Logger | None = None,
     ):
         """Initialize the testing pipeline with model and data configuration."""
         self.test_loader: DataLoader = test_loader
-        self.cell_types: list[str] | None = None  # Optional cell type annotations
+        self.cell_types: list[str] | None = cell_types  # Optional cell type annotations
         self.model: nn.Module = model
         self.device: torch.device = device
         self.logger: Logger | None = logger
@@ -599,16 +606,27 @@ class TestingPipeline:
                 self.predictions.extend(batch_predictions)
 
         # Compile results into a structured dictionary
-        results = {
-            "input": self.inputs,
-            "target": self.targets,
-            "prediction": self.predictions,
-            "cell_type": self.cell_types,
-        }
+        if self.cell_types is not None:
+            results = {
+                "input": self.inputs,
+                "target": self.targets,
+                "prediction": self.predictions,
+                "cell_type": self.cell_types,
+            }
+        else:
+            results = {
+                "input": self.inputs,
+                "target": self.targets,
+                "prediction": self.predictions,
+            }
 
         return results
 
-    def create_anndata(self, results: dict[str, Any]) -> ad.AnnData:
+    def create_anndata(
+        self,
+        results: dict[str, Any],
+        target_names: list[str],
+    ) -> ad.AnnData:
         """Create an AnnData object from the prediction results.
 
         Converts the testing results into an AnnData object, which is a standard
@@ -629,27 +647,31 @@ class TestingPipeline:
             self.logger.info("Creating AnnData object from results.")
 
         # Use inputs as the main data matrix (X)
-        X = results["input"]
+        X = csr_matrix(results["input"])
 
-        # Create observations (obs) dataframe with cell type annotations
-        obs = pd.DataFrame({"cell_type": results["cell_type"]})
-        obs.index = [f"sample_{i}" for i in range(len(obs))]
+        if self.cell_types is not None:
+            # Create observations (obs) dataframe with cell type annotations
+            obs = pd.DataFrame({"cell_type": results["cell_type"]})
+            obs.index = [f"sample_{i}" for i in range(len(obs))]
 
-        # Create AnnData object
-        adata = ad.AnnData(X=X, obs=obs, dtype=X.dtype)
+            # Create AnnData object
+            adata = ad.AnnData(X=X, obs=obs)
+        else:
+            adata = ad.AnnData(X=X)
 
         # Store outputs and predictions in obsm (multi-dimensional observations)
-        adata.obsm["targets"] = results["target"]
-        adata.obsm["predictions"] = results["prediction"]
+        adata.obsm["targets"] = csr_matrix(results["target"])
+        adata.obsm["predictions"] = csr_matrix(results["prediction"])
 
         # Add metadata to uns (unstructured annotations)
         adata.uns["model_info"] = {
             "model_name": self.model.__class__.__name__,
             "device": str(self.device),
-            "total_samples": len(results["input"]),
-            "input_shape": results["input"][0].shape,
-            "output_shape": results["target"][0].shape,
+            "shape_targets": list(adata.obsm["targets"].shape),
+            "shape_predictions": list(adata.obsm["predictions"].shape),
         }
+
+        adata.uns["target_names"] = target_names
 
         if self.logger is not None:
             self.logger.info(f"AnnData object created successfully.")

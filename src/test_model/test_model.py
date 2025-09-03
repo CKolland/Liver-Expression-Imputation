@@ -5,16 +5,16 @@ import pandas as pd
 import torch
 from torch.utils.data import DataLoader
 
-from utils.io import assert_path, ImputationDataset, setup_logging
+from utils import confy
+from utils.io import assert_path, ImputationDataset, load_toml, setup_logging
 from utils.fit import TestingPipeline
+from utils.model import MLP
 
 
 def test_model(
-    testset_path: str,
-    mask_path: str,
+    setup_path: str,
     model_path: str,
     out_path: str,
-    layer: str | None = None,
 ):
     """_summary_
 
@@ -22,10 +22,13 @@ def test_model(
     :param str out_path: _description_
     """
     # Verify paths
-    testset_file = assert_path(testset_path, assert_dir=False)  # File
-    mask_file = assert_path(mask_path, assert_dir=False)
+    setup_file = assert_path(setup_path, assert_dir=False)  # File
     model_file = assert_path(model_path, assert_dir=False)
     out_dir = assert_path(out_path)  # Directory
+
+    # Load model config here to get model name
+    run_setup = load_toml(setup_file)
+    model_config = confy.setup_model(run_setup["model"])
 
     # Create run directory
     now = datetime.now().strftime("%Y-%m-%d_%H-%M")
@@ -47,52 +50,82 @@ def test_model(
     logger.info(f"Supported device for this run: {device}.")
     logger.info("----")
 
-    # Load training data
-    test_data = ad.read_h5ad(testset_file)
-    logger.info(f"📁 Test data loaded successfully: '{testset_file}'.")
+    # Load test data
+    adatas: list[ad.AnnData] = []
+    target_names: list[list[str]] = []
+    test_config = confy.setup_dataset(run_setup["test_data"])
+    for idx, test_data in enumerate(test_config):
+        test_data_config = test_config.config[test_data]
+        tdata = ad.read_h5ad(test_data_config["path"])
+        logger.info(
+            f"📁 Test data {idx + 1} loaded successfully: '{test_data_config['path']}'."
+        )
 
-    # Choose data layer if provided
-    if layer is not None:
-        test_data.X = test_data.layers[layer]
-        logger.info(f"Selected {layer} as data layer.")
+        # Choose data layer if provided
+        if test_data_config["layer"] is not None:
+            tdata.X = tdata.layers[test_data_config["layer"]]
+            logger.info(f"Selected {test_data_config['layer']} as data layer.")
 
-    logger.debug(test_data)
+        adatas.append(tdata)
+        target_names.append(tdata.var_names.to_list())
+        logger.debug(tdata)
 
     # Load imputation mask
-    imputation_mask = pd.read_csv(mask_file, header=None)
+    masking_config = confy.setup_dataset(run_setup["imputation_mask"])
+    imputation_mask = pd.read_csv(masking_config.path, header=masking_config.header)
     imputation_mask = imputation_mask[0].tolist()
-    logger.info(f"📁 Mask for imputation loaded successfully: '{mask_file}'.")
+    logger.info(f"📁 Mask for imputation loaded successfully: '{masking_config.path}'.")
 
-    test_dataset = ImputationDataset(test_data, imputation_mask)
-    logger.info("Created testing dataset.")
-    logger.debug(test_dataset)
+    test_datasets: list[ImputationDataset] = []
+    for idx, adata in enumerate(adatas):
+        test_dataset = ImputationDataset(adata, imputation_mask)
+        logger.info(f"Created testing dataset {idx + 1}.")
+        logger.debug(test_dataset)
+        test_datasets.append(test_dataset)
+
     logger.info("----")
 
     # -------------------
     #     Setup model
     # -------------------
 
-    mlp = torch.load(model_file, map_location=device)
-    logger.info("Model successfully loaded.")
-    logger.debug(mlp)
+    loaded_model = torch.load(model_file, map_location=device)
+    # If state dict is loaded
+    if isinstance(loaded_model, dict):
+        mlp = MLP(model_config.to_torch(), device)
+        logger.info("Built model successfully.")
+        logger.debug(mlp)
+
+        mlp.load_state_dict(loaded_model)
+    # If complete model is loaded
+    else:
+        mlp = loaded_model
+
     logger.info("----")
 
     # ------------------
     #     Test model
     # ------------------
 
-    # Create test data loader
-    test_loader = DataLoader(
-        dataset=test_dataset,
-        batch_size=128,
-        shuffle=False,
-        num_workers=8,
-        pin_memory=True if torch.cuda.is_available() else False,
-    )
+    # Load training config
+    train_config = confy.setup_training(run_setup["training"])
 
-    pipeline = TestingPipeline(test_loader, mlp, device, logger)
-    results = pipeline.test()
-    adata = pipeline.create_anndata(results)
+    for idx, test_dataset in enumerate(test_datasets):
+        # Create test data loader
+        test_loader = DataLoader(
+            dataset=test_dataset,
+            batch_size=train_config.batch_size,
+            shuffle=False,
+            num_workers=train_config.num_workers,
+            pin_memory=True if torch.cuda.is_available() else False,
+        )
 
-    # Save AnnData object
-    adata.write(run_dir / f"test_results_{now}.h5ad")
+        pipeline = TestingPipeline(test_loader, mlp, device, logger=logger)
+        results = pipeline.test()
+
+        adata = pipeline.create_anndata(results, target_names[idx])
+
+        # Save AnnData object
+        save_path = run_dir / f"{model_config.name}_test_{idx + 1}_{now}.h5ad"
+        adata.write(save_path, compression="gzip")
+        logger.info(f"Wrote AnnData successfully to file: '{save_path}'")

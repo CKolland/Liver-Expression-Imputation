@@ -86,6 +86,14 @@ class DataCollection:
         )
         return f"{self.__class__.__name__}({attrs})"
 
+    def __iter__(self):
+        """_summary_
+
+        :return: _description_
+        :rtype: _type_
+        """
+        return iter(self.config)
+
 
 # --- Layer and Model configuration ---
 

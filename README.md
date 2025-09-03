@@ -1,16 +1,24 @@
+**Master’s Thesis Project – Bioinformatics**  
+Goethe University Frankfurt
+
+**Thesis Title:**  
+*Neural Network-Based Gene Expression Imputation for Subcellular Spatial Transcriptomics Data*
+
+For the companion repository focusing on model training and evaluation, see: [EDA-Spatial-Liver](https://github.com/CKolland/EDA-Spatial-Liver).
+
 # STEXI
 
 **STEXI** (Spatial Transcriptomics Expression Imputation) is a deep learning toolkit for the imputation of spatial transcriptomics data. It supports flexible preprocessing, model training, and evaluation workflows, and is designed for scalable, GPU-accelerated analysis of large single-cell and spatial omics datasets.
 
-## Features
+## ✨ Features
 
-- **Flexible Preprocessing:** Easily concatenate, filter, and prepare AnnData files for downstream analysis.
-- **Deep Learning Imputation:** State-of-the-art neural network models for imputing missing gene expression values in spatial transcriptomics data.
-- **Scalable Training:** Efficient training routines with support for GPU acceleration and large datasets.
-- **Evaluation Tools:** Comprehensive metrics and visualization utilities for assessing imputation performance.
-- **Modular Design:** Easily extend or customize preprocessing, model, and evaluation components.
+- 🧹 **Flexible Preprocessing:** Easily concatenate, filter, and prepare AnnData files for downstream analysis.
+- 🤖 **Deep Learning Imputation:** State-of-the-art neural network models for imputing missing gene expression values in spatial transcriptomics data.
+- ⚡ **Scalable Training:** Efficient training routines with support for GPU acceleration and large datasets.
+- 📊 **Evaluation Tools:** Comprehensive metrics and visualization utilities for assessing imputation performance.
+- 🧩 **Modular Design:** Easily extend or customize preprocessing, model, and evaluation components.
 
-## Package Structure
+## 📂 Package Structure
 
 ```
 Liver-Expression-Imputation/
@@ -43,9 +51,7 @@ Liver-Expression-Imputation/
 - `test_model/`: Evaluation and testing utilities.
 - `utils/`: Shared utilities and configuration classes.
 
-## Installation
-
-Since STEXI is not yet released on PyPI, you can install it directly from the GitHub repository:
+## ⚙️ Installation
 
 ```sh
 git clone https://github.com/CKolland/Liver-Expression-Imputation
@@ -55,7 +61,7 @@ pip install -e .
 
 This will install STEXI in editable mode, allowing you to make changes to the source code and use the command-line tools immediately.
 
-## Usage
+## 🚀 Usage
 
 After installation, you can use the provided command-line tools:
 
@@ -66,10 +72,13 @@ fit -c config.yaml -o output_dir
 
 Refer to the documentation and CLI help (`-h` or `--help` flags) for detailed usage instructions.
 
-## License
+## 📜 License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License.  
+See [LICENSE](LICENSE) for details.
 
----
+## 📬 Contact
 
-For questions or contributions, please contact [Christian Kolland](mailto:christian.kolland@stud.uni-frankfurt.de).
+Maintainer: Christian Kolland ([Schulz Lab](https://schulzlab.github.io/))
+
+For questions, requests (including access to large data files), or feedback, please contact the maintainer directly.

@@ -4,6 +4,7 @@ import preprocess._constants as C
 from preprocess.concat_h5ad import concat_h5ad
 from preprocess.create_testset import create_testset
 from preprocess.scale_data import scale_data
+from preprocess.subset import subset_adata
 
 
 def main():
@@ -109,6 +110,28 @@ def main():
         help=C.SCALE_LAYER_HELP,
     )
 
+    # -------------------------
+    #     `testset` command
+    # -------------------------
+
+    # Creates training and testing split from data
+    parser_testset = subparsers.add_parser(C.SUB_COMMAND_TESTSET, help=C.TESTSET_HELP)
+
+    parser_testset.add_argument(
+        C.TESTSET_ADATA_LONG,
+        C.TESTSET_ADATA_SHORT,
+        type=str,
+        required=True,
+        help=C.TESTSET_ADATA_HELP,
+    )
+    parser_testset.add_argument(
+        C.TESTSET_SPLIT_LONG,
+        C.TESTSET_SPLIT_SHORT,
+        type=float,
+        default=C.TESTSET_SPLIT_DEFAULT,
+        help=C.TESTSET_SPLIT_HELP,
+    )
+
     # ------------------------
     #     `subset` command
     # ------------------------
@@ -124,11 +147,24 @@ def main():
         help=C.SUBSET_ADATA_HELP,
     )
     parser_subset.add_argument(
-        C.SUBSET_SPLIT_LONG,
-        C.SUBSET_SPLIT_SHORT,
+        C.SUBSET_ROWS_LONG,
+        C.SUBSET_ROWS_SHORT,
         type=float,
-        default=0.1,
-        help=C.SUBSET_SPLIT_HELP,
+        default=C.SUBSET_ROWS_DEFAULT,
+        help=C.SUBSET_ROWS_HELP,
+    )
+    parser_subset.add_argument(
+        C.SUBSET_COLS_LONG,
+        C.SUBSET_COLS_SHORT,
+        type=float,
+        default=C.SUBSET_COLS_DEFAULT,
+        help=C.SUBSET_COLS_HELP,
+    )
+    parser_subset.add_argument(
+        C.SUBSET_SHUFFLE_LONG,
+        C.SUBSET_SHUFFLE_SHORT,
+        help=C.SUBSET_SHUFFLE_HELP,
+        action="store_true",
     )
 
     # Parse command-line arguments
@@ -138,8 +174,10 @@ def main():
         concat_h5ad(args.adatas, out_path=args.output)
     elif args.command == C.SUB_COMMAND_SCALE:
         scale_data(args.adata, scale_mode=args.mode, data_layer=args.layer)
-    elif args.command == C.SUB_COMMAND_SUBSET:
+    elif args.command == C.SUB_COMMAND_TESTSET:
         create_testset(args.adata, split=args.split)
+    elif args.command == C.SUB_COMMAND_SUBSET:
+        subset_adata(args.adata, args.rows, args.columns, args.shuffle)
 
 
 if __name__ == "__main__":

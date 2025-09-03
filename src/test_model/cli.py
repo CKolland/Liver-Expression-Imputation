@@ -12,22 +12,10 @@ def main():
     parser = argparse.ArgumentParser(description=C.PARSER_DESC)
 
     parser.add_argument(
-        C.DATA_LONG,
-        C.DATA_SHORT,
+        C.CONFIG_LONG,
+        C.CONFIG_SHORT,
         type=str,
-        help=C.DATA_HELP,
-    )
-    parser.add_argument(
-        C.LAYER_LONG,
-        C.LAYER_SHORT,
-        default=C.LAYER_DEFAULT,
-        help=C.LAYER_HELP,
-    )
-    parser.add_argument(
-        C.MASK_LONG,
-        C.MASK_SHORT,
-        type=str,
-        help=C.MASK_HELP,
+        help=C.CONFIG_HELP,
     )
     parser.add_argument(
         C.MODEL_LONG,
@@ -38,20 +26,14 @@ def main():
     parser.add_argument(
         C.OUTPUT_LONG,
         C.OUTPUT_SHORT,
-        action="store_true",
+        type=str,
         help=C.OUTPUT_HELP,
     )
 
     # Parse command-line arguments
     args = parser.parse_args()
 
-    test_model(
-        args.test_data,
-        args.imputation_mask,
-        args.model,
-        args.output,
-        args.layer,
-    )
+    test_model(args.config, args.model, args.output)
 
 
 if __name__ == "__main__":
