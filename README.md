@@ -64,7 +64,7 @@ After installation, you can use the provided command-line tools:
 
 ```sh
 preprocess concat -d data1.h5ad data2.h5ad -o merged.h5ad
-fit -c config.yaml -o output_dir
+fit -c config.yml -o output_dir
 ```
 
 Refer to the documentation and CLI help (`-h` or `--help` flags) for detailed usage instructions.
