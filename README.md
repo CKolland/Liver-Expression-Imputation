@@ -5,6 +5,9 @@ For the companion repository focusing on data exploration and preprocessing, see
 
 # STEXI
 
+[![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 **STEXI** (Spatial Transcriptomics Expression Imputation) is a deep learning toolkit for the imputation of spatial transcriptomics data. It supports flexible preprocessing, model training, and evaluation workflows, and is designed for scalable, GPU-accelerated analysis of large single-cell and spatial omics datasets.
 
 ## ✨ Features
@@ -47,6 +50,8 @@ Liver-Expression-Imputation/
 - `fit_model/`: Training routines and CLI for model fitting.
 - `test_model/`: Evaluation and testing utilities.
 - `utils/`: Shared utilities and configuration classes.
+
+>⚠️ Note: Large raw and intermediate data files have been excluded from this repository due to size limitations. They can be provided upon request.
 
 ## ⚙️ Installation
 
